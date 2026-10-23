@@ -1,0 +1,7 @@
+node_modules
+dist
+# personal audio files (copyrighted recordings stay local)
+piano_samples/
+*.mp3
+*.wav
+*.m4a

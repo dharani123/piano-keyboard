@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Piano</title>
+<style>
+  :root {
+    --bg: #1b1d23;
+    --panel: #24272f;
+    --text: #e8e6e1;
+    --muted: #8b8f99;
+    --accent: #f2b33d;
+    --white-key: #f7f5ef;
+    --white-key-down: #f2d38a;
+    --black-key: #15161a;
+    --black-key-down: #b9822a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 24px 16px;
+    user-select: none;
+  }
+  h1 { margin: 0; font-weight: 600; letter-spacing: 0.02em; }
+  .status {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    background: var(--panel);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+  .status .label { color: var(--muted); margin-right: 6px; }
+  #note { font-size: 28px; font-weight: 700; color: var(--accent); min-width: 56px; display: inline-block; }
+  kbd {
+    background: #33363f;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+  }
+
+  .piano {
+    position: relative;
+    display: flex;
+    background: #0e0f12;
+    padding: 14px 14px 18px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.45);
+  }
+  .white {
+    width: 78px;
+    height: 260px;
+    background: var(--white-key);
+    border: 1px solid #c9c5ba;
+    border-radius: 0 0 8px 8px;
+    margin: 0 1px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 14px;
+    color: #3a3a3a;
+    cursor: pointer;
+    transition: background .05s, transform .05s;
+  }
+  /* visual gap between the two hands (F and J) */
+  .white.gap { margin-right: 18px; }
+  .black {
+    position: absolute;
+    top: 14px;
+    width: 48px;
+    height: 160px;
+    background: var(--black-key);
+    border-radius: 0 0 6px 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 10px;
+    color: #d7d7d7;
+    cursor: pointer;
+    z-index: 2;
+    transition: background .05s, transform .05s;
+  }
+  .key .k { font-family: ui-monospace, monospace; font-size: 18px; font-weight: 700; }
+  .key .n { font-size: 12px; opacity: .7; margin-top: 2px; }
+  .white.down { background: var(--white-key-down); transform: translateY(2px); }
+  .black.down { background: var(--black-key-down); transform: translateY(2px); }
+
+  .help { color: var(--muted); font-size: 14px; text-align: center; line-height: 1.8; }
+
+  @media (max-width: 760px) {
+    .white { width: 40px; height: 180px; }
+    .black { width: 26px; height: 110px; }
+    .white.gap { margin-right: 8px; }
+    .key .k { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+  <h1>🎹 Desk Piano</h1>
+
+  <div class="status">
+    <div><span class="label">Note</span><span id="note">–</span></div>
+    <div><span class="label">Octave</span><strong id="octave">4</strong></div>
+    <div><span class="label">Volume</span><input id="volume" type="range" min="0" max="1" step="0.05" value="0.6"></div>
+  </div>
+
+  <div class="piano" id="piano"></div>
+
+  <div class="help">
+    Left hand on <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd>, right hand on <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd>: these are C D E F G A B.<br>
+    Sharps: <kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>I</kbd> <kbd>O</kbd> &nbsp;·&nbsp;
+    Octave down / up: <kbd>Z</kbd> / <kbd>X</kbd>
+  </div>
+
+<script>
+  // semitone = offset from C within the octave
+  const KEYS = [
+    { code: 'KeyA', key: 'A', note: 'C',  semitone: 0,  type: 'white' },
+    { code: 'KeyW', key: 'W', note: 'C#', semitone: 1,  type: 'black', after: 0 },
+    { code: 'KeyS', key: 'S', note: 'D',  semitone: 2,  type: 'white' },
+    { code: 'KeyE', key: 'E', note: 'D#', semitone: 3,  type: 'black', after: 1 },
+    { code: 'KeyD', key: 'D', note: 'E',  semitone: 4,  type: 'white' },
+    { code: 'KeyF', key: 'F', note: 'F',  semitone: 5,  type: 'white', gap: true },
+    { code: 'KeyT', key: 'T', note: 'F#', semitone: 6,  type: 'black', after: 3 },
+    { code: 'KeyJ', key: 'J', note: 'G',  semitone: 7,  type: 'white' },
+    { code: 'KeyI', key: 'I', note: 'G#', semitone: 8,  type: 'black', after: 4 },
+    { code: 'KeyK', key: 'K', note: 'A',  semitone: 9,  type: 'white' },
+    { code: 'KeyO', key: 'O', note: 'A#', semitone: 10, type: 'black', after: 5 },
+    { code: 'KeyL', key: 'L', note: 'B',  semitone: 11, type: 'white' },
+  ];
+  const byCode = Object.fromEntries(KEYS.map(k => [k.code, k]));
+
+  let octave = 4;
+  let ctx = null;
+  let master = null;
+  const playing = {}; // code -> voice
+
+  const pianoEl = document.getElementById('piano');
+  const noteEl = document.getElementById('note');
+  const octaveEl = document.getElementById('octave');
+  const volumeEl = document.getElementById('volume');
+
+  // ---- build the keyboard ----
+  const whiteEls = [];
+  for (const k of KEYS.filter(k => k.type === 'white')) {
+    const el = document.createElement('div');
+    el.className = 'key white' + (k.gap ? ' gap' : '');
+    el.innerHTML = `<span class="k">${k.key}</span><span class="n">${k.note}</span>`;
+    pianoEl.appendChild(el);
+    k.el = el;
+    whiteEls.push(el);
+  }
+  for (const k of KEYS.filter(k => k.type === 'black')) {
+    const el = document.createElement('div');
+    el.className = 'key black';
+    el.innerHTML = `<span class="k">${k.key}</span><span class="n">${k.note}</span>`;
+    pianoEl.appendChild(el);
+    k.el = el;
+  }
+  // centre each black key on the border between its two white keys
+  function placeBlackKeys() {
+    for (const k of KEYS.filter(k => k.type === 'black')) {
+      const left = whiteEls[k.after];
+      const right = whiteEls[k.after + 1];
+      const border = (left.offsetLeft + left.offsetWidth + right.offsetLeft) / 2;
+      k.el.style.left = (border - k.el.offsetWidth / 2) + 'px';
+    }
+  }
+  placeBlackKeys();
+  window.addEventListener('resize', placeBlackKeys);
+
+  // ---- sound ----
+  function ensureAudio() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain();
+    master.gain.value = Number(volumeEl.value);
+    master.connect(ctx.destination);
+  }
+  volumeEl.addEventListener('input', () => { if (master) master.gain.value = Number(volumeEl.value); });
+
+  function frequency(semitone) {
+    const midi = 12 * (octave + 1) + semitone; // C4 = 60
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  // A few decaying harmonics through a closing low-pass gives a soft, piano-ish tone
+  function startVoice(freq) {
+    const now = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0, now);
+    out.gain.linearRampToValueAtTime(0.35, now + 0.005);
+    out.gain.exponentialRampToValueAtTime(0.12, now + 0.4);
+    out.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(Math.min(freq * 8, 12000), now);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(freq * 1.5, 300), now + 1.5);
+    filter.connect(out);
+    out.connect(master);
+
+    const oscs = [[1, 1], [2, 0.45], [3, 0.2], [4, 0.1], [5, 0.05]].map(([mult, amp]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq * mult;
+      g.gain.value = amp;
+      osc.connect(g).connect(filter);
+      osc.start(now);
+      osc.stop(now + 3.6);
+      return osc;
+    });
+    return { out, oscs };
+  }
+
+  function stopVoice(voice) {
+    const now = ctx.currentTime;
+    voice.out.gain.cancelScheduledValues(now);
+    voice.out.gain.setValueAtTime(voice.out.gain.value, now);
+    voice.out.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    voice.oscs.forEach(o => o.stop(now + 0.3));
+  }
+
+  function press(code) {
+    const k = byCode[code];
+    if (!k || playing[code]) return;
+    ensureAudio();
+    playing[code] = startVoice(frequency(k.semitone));
+    k.el.classList.add('down');
+    noteEl.textContent = k.note + octave;
+  }
+
+  function release(code) {
+    const k = byCode[code];
+    if (!k || !playing[code]) return;
+    stopVoice(playing[code]);
+    delete playing[code];
+    k.el.classList.remove('down');
+  }
+
+  function shiftOctave(delta) {
+    octave = Math.min(7, Math.max(1, octave + delta));
+    octaveEl.textContent = octave;
+  }
+
+  // ---- input ----
+  document.addEventListener('keydown', e => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === 'KeyZ') return shiftOctave(-1);
+    if (e.code === 'KeyX') return shiftOctave(1);
+    if (byCode[e.code]) { e.preventDefault(); press(e.code); }
+  });
+  document.addEventListener('keyup', e => release(e.code));
+  window.addEventListener('blur', () => Object.keys(playing).forEach(release));
+
+  for (const k of KEYS) {
+    k.el.addEventListener('pointerdown', e => { e.preventDefault(); press(k.code); });
+    k.el.addEventListener('pointerup', () => release(k.code));
+    k.el.addEventListener('pointerleave', () => release(k.code));
+  }
+</script>
+</body>
+</html>
