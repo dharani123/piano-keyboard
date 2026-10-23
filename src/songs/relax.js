@@ -1,25 +1,26 @@
 // Relax mode: every Carnatic exercise in the traditional order, cut into
-// 8-beat lines (one Adi talam cycle) that are heard, then played, one by one.
+// lines of one talam cycle (8 beats for Adi) that are heard, then played, one by one.
 
 export const LINE_BEATS = 8;
 
 // songs = carnaticSongs(raga), already in order
 export function journeyLines(songs) {
   return songs.flatMap((song, exercise) => {
-    const count = Math.ceil(song.totalBeats / LINE_BEATS);
+    const beats = song.talam?.beats ?? LINE_BEATS;
+    const count = Math.ceil(song.totalBeats / beats);
     return Array.from({ length: count }, (_, line) => {
-      const from = line * LINE_BEATS;
+      const from = line * beats;
       const events = song.events
-        .filter(e => e.beat >= from && e.beat < from + LINE_BEATS)
+        .filter(e => e.beat >= from && e.beat < from + beats)
         .map(e => ({ ...e, beat: e.beat - from }));
-      return { exercise, line, lines: count, title: song.title, events, totalBeats: LINE_BEATS };
+      return { exercise, line, lines: count, title: song.title, events, totalBeats: beats, talam: song.talam, sa: song.sa ?? 0, layout: song.layout ?? 0 };
     });
   });
 }
 
 // Play-along: the rest of the current exercise as one continuous run.
-// With listenFirst each line takes 16 beats, the app playing it (beats 0–8)
-// and you echoing it (8–16); without, the lines simply follow each other.
+// With listenFirst each line takes two talam cycles, the app playing it and
+// you echoing it; without, the lines simply follow each other.
 // Returns the song you play plus, per line, where its listen and play parts start.
 export function playAlongPlan(lines, pos, listenFirst) {
   const { exercise } = lines[pos];
@@ -27,11 +28,12 @@ export function playAlongPlan(lines, pos, listenFirst) {
   const events = [];
   let beat = 0;
   for (let p = pos; p < lines.length && lines[p].exercise === exercise; p++) {
+    const len = lines[p].totalBeats;
     const listenAt = listenFirst ? beat : null;
-    const playAt = listenFirst ? beat + LINE_BEATS : beat;
+    const playAt = listenFirst ? beat + len : beat;
     segments.push({ pos: p, listenAt, playAt });
     for (const e of lines[p].events) events.push({ ...e, beat: e.beat + playAt });
-    beat = playAt + LINE_BEATS;
+    beat = playAt + len;
   }
   return { segments, song: { events, totalBeats: beat } };
 }

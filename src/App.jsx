@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { engine } from './audio/engine.js';
 import { frequency } from './audio/pitch.js';
 import { INSTRUMENTS } from './audio/instruments.js';
-import { byCode, shownCode, MIN_OCTAVE, MAX_OCTAVE, MAX_TRANSPOSE } from './data/keymap.js';
+import { keyForCode, MIN_OCTAVE, MAX_OCTAVE, MAX_TRANSPOSE } from './data/keymap.js';
 import { useKeyboard } from './hooks/useKeyboard.js';
 import Piano from './components/Piano.jsx';
 import Display from './components/Display.jsx';
@@ -28,6 +28,7 @@ export default function App() {
   const [lessonStatus, setLessonStatus] = useState(null);
   const [lessonSlot, setLessonSlot] = useState(null); // element under the piano where exercises render
   const [fallSlot, setFallSlot] = useState(null); // element above the piano where song notes fall
+  const [layout, setLayout] = useState(0); // keyboard layout shift: 0, +2 (low notes) or -2 (high), see keymap.js
   const [hideOutlines, setHideOutlines] = useState(() => {
     try { return localStorage.getItem('desk-piano-hide-outlines') === '1'; } catch { return false; }
   });
@@ -44,6 +45,8 @@ export default function App() {
   const sustainOn = spaceHeld || pedalLatched;
 
   useEffect(() => { engine.setSustain(sustainOn); }, [sustainOn]);
+  // A key held across a layout change would never get its key-up note
+  useEffect(() => releaseAll(), [layout]);
   useEffect(() => {
     try { localStorage.setItem('desk-piano-hide-outlines', hideOutlines ? '1' : '0'); } catch { /* storage blocked */ }
   }, [hideOutlines]);
@@ -53,19 +56,20 @@ export default function App() {
 
   function noteDown(code) {
     if (heldRef.current.has(code)) return;
-    const k = byCode[code];
+    const k = keyForCode(code, layout);
+    if (!k) return; // a key this layout doesn't use
     const oct = octave + (k.octaveUp ?? 0);
     heldRef.current.set(code, { semitone: k.semitone, octave: oct });
-    setPressed(new Set([...heldRef.current.keys()].map(shownCode)));
+    setPressed(new Set(heldRef.current.keys()));
     engine.noteOn(code, frequency(oct, k.semitone, transpose), INSTRUMENTS[voiceIndex].id);
     setLastNote(k.note + oct);
-    const event = { semitone: k.semitone, octave: oct, code: shownCode(code), time: engine.now(), held: [...heldRef.current.values()] };
+    const event = { semitone: k.semitone, octave: oct, code, time: engine.now(), held: [...heldRef.current.values()] };
     for (const fn of listeners.current) fn(event);
   }
 
   function noteUp(code) {
     if (!heldRef.current.delete(code)) return;
-    setPressed(new Set([...heldRef.current.keys()].map(shownCode)));
+    setPressed(new Set(heldRef.current.keys()));
     engine.noteOff(code);
   }
 
@@ -107,6 +111,7 @@ export default function App() {
     setStatus: setLessonStatus,
     slot: lessonSlot,
     fallSlot,
+    setLayout,
     // keys held right now, as { semitone, octave }
     getHeld: () => [...heldRef.current.values()],
   };
@@ -151,6 +156,7 @@ export default function App() {
         <div className="fall-slot" ref={setFallSlot} />
         <Piano
           hideOutlines={hideOutlines}
+          shift={layout}
           pressed={pressed}
           targetCodes={highlight?.targets ?? []}
           wrongCode={highlight?.wrong}
@@ -167,9 +173,6 @@ export default function App() {
         · <kbd>L</kbd><kbd>;</kbd><kbd>'</kbd><kbd>Enter</kbd> = C D E F above
         &nbsp;·&nbsp; sharps <kbd>E</kbd><kbd>R</kbd> · <kbd>Y</kbd><kbd>U</kbd><kbd>I</kbd> · <kbd>P</kbd><kbd>[</kbd>
         &nbsp;·&nbsp; transpose <kbd>←</kbd><kbd>→</kbd>
-        <br />
-        Number row (two octaves): <kbd>`</kbd><kbd>1</kbd><kbd>2</kbd> = G A B below · <kbd>3</kbd>–<kbd>9</kbd> = C–B (same as S–K) · <kbd>0</kbd><kbd>-</kbd><kbd>=</kbd><kbd>⌫</kbd> = C D E F above
-        &nbsp;·&nbsp; sharps on F-keys, F3 = C# (just after 3)
       </p>
     </div>
   );

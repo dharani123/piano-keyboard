@@ -9,15 +9,16 @@ describe('journeyLines', () => {
     expect(lines[0]).toMatchObject({ title: 'Sarali Varisai 1', line: 0, lines: 2 });
     expect(lines[0].events.map(e => e.notes[0].name).join(' ')).toBe('Sa Ri Ga Ma Pa Da Ni S\u0307a');
     expect(lines[1].events.map(e => e.notes[0].name).join(' ')).toBe('S\u0307a Ni Da Pa Ma Ga Ri Sa');
-    expect(lines.at(-1).title).toBe('Janta Varisai 2');
+    expect(lines.at(-1).title).toBe('Alankaram 7 · Eka');
   });
 
-  it('cuts every exercise into 8-beat lines starting at beat 0', () => {
+  it('cuts every exercise into talam-cycle lines starting at beat 0', () => {
     for (const l of lines) {
       expect(l.events[0].beat).toBe(0);
       const end = l.events.at(-1).beat + l.events.at(-1).beats;
-      expect(end).toBe(8);
+      expect(end).toBe(l.talam.beats);
     }
+    expect(lines.find(l => l.title.startsWith('Alankaram 3')).totalBeats).toBe(6);
   });
 
   it('keeps karvai inside its line', () => {

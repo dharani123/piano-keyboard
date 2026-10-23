@@ -5,6 +5,7 @@ import { frequency } from '../../audio/pitch.js';
 import { RAGAS, DEFAULT_RAGA, CARNATIC_BPM, carnaticSongs } from '../../songs/carnatic.js';
 import { journeyLines, playAlongPlan, segmentAt, loadRelaxPos, saveRelaxPos } from '../../songs/relax.js';
 import { createPlay, press, advance, pendingGroup, pitchKey } from '../../songs/player.js';
+import RagaSelect from './RagaSelect.jsx';
 import FallingNotes, { FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 
 const SPEEDS = [0.5, 0.75, 1];
@@ -36,9 +37,14 @@ export default function RelaxMode({ piano }) {
   const frame = useRef(0);
   const timer = useRef(0);
   const lit = useRef('');
+  const droneSa = useRef(null); // the Sa the drone is sounding, null when off
   const pianoRef = useRef(piano);
   pianoRef.current = piano;
   const line = lines[pos];
+  // Mel/Mandra Sthayi slide the keys two places for the whole exercise
+  const layout = line.layout;
+  useEffect(() => { piano.setLayout(layout); }, [layout]);
+  useEffect(() => () => pianoRef.current.setLayout(0), []);
 
   function light(codes) {
     const id = codes.join();
@@ -66,6 +72,7 @@ export default function RelaxMode({ piano }) {
   function stop() {
     halt();
     engine.droneStop();
+    droneSa.current = null;
     setStep('idle');
     pianoRef.current.setStatus(null);
   }
@@ -79,18 +86,23 @@ export default function RelaxMode({ piano }) {
 
   function start() {
     const base = piano.octave;
-    if (drone) {
-      const f = (oct, semi) => frequency(oct, semi, piano.transpose);
-      engine.droneStart([f(base - 1, 7), f(base, 0), f(base, 0), f(base - 1, 0)]);
-    }
     piano.setStatus(RAGAS[raga].name.slice(0, 14).toUpperCase());
     requestAnimationFrame(() => piano.fallSlot?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
     playLine(pos, base);
   }
 
+  // Tanpura on the exercise's Sa: Pa, Sa, Sa, low Sa
+  function tuneDrone(base, sa) {
+    if (!drone || droneSa.current === sa) return;
+    const f = semi => frequency(base, sa + semi, pianoRef.current.transpose);
+    engine.droneStart([f(-5), f(0), f(0), f(-12)]);
+    droneSa.current = sa;
+  }
+
   function playLine(p, base) {
     halt();
     const l = lines[p];
+    tuneDrone(base, l.sa);
     const spb = 60 / (CARNATIC_BPM * speed);
     if (flow === 'play') playAlong(p, base, spb);
     else if (listenFirst) listen(p, l, base, spb);
@@ -112,7 +124,7 @@ export default function RelaxMode({ piano }) {
       const b = (engine.now() - t0) / spb;
       const i = l.events.findIndex(e => b >= e.beat && b < e.beat + e.beats);
       setSounding(i);
-      light(i >= 0 ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct)) : []);
+      light(i >= 0 ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct, l.layout)) : []);
       if (b > l.totalBeats + 0.3) {
         setSounding(-1);
         light([]);
@@ -137,7 +149,7 @@ export default function RelaxMode({ piano }) {
       advance(r.play, Math.min((t - r.last) / 1000, 0.25) / r.spb, held);
       r.last = t;
       const next = pendingGroup(r.play).filter(n => n.beat - r.play.beat <= 1);
-      light(next.map(n => codeFor(n.semitone, n.octave - r.base)));
+      light(next.map(n => codeFor(n.semitone, n.octave - r.base, l.layout)));
       setFrame(f => f + 1);
       if (r.play.done) {
         light([]);
@@ -185,11 +197,11 @@ export default function RelaxMode({ piano }) {
         const l = lines[seg.pos];
         const i = l.events.findIndex(e => beat - seg.listenAt >= e.beat && beat - seg.listenAt < e.beat + e.beats);
         setSounding(i);
-        light(i >= 0 ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct)) : []);
+        light(i >= 0 ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct, l.layout)) : []);
       } else {
         setSounding(-1);
         const next = r.play.notes.filter(n => !n.hit && !n.missed && n.beat - r.play.beat <= 0.5);
-        light(next.map(n => codeFor(n.semitone, n.octave - r.base)));
+        light(next.map(n => codeFor(n.semitone, n.octave - r.base, lines[p].layout)));
       }
       setFrame(f => f + 1);
       if (r.play.done) {
@@ -217,7 +229,7 @@ export default function RelaxMode({ piano }) {
   const r = run.current;
   const active = step !== 'idle';
   const fall = (step === 'play' || (flow === 'play' && step === 'listen')) && r?.play && (
-    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} gentle />
+    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle />
   );
 
   // The current line as swaras, the sounding one lit while listening
@@ -226,7 +238,7 @@ export default function RelaxMode({ piano }) {
       {line.events.map((e, i) => {
         const done = step === 'play' && r?.play?.notes.find(n => n.beat === e.beat + (r.offset ?? 0))?.hit;
         return (
-          <span key={i} className={'relax-swara' + (i === sounding ? ' on' : '') + (done ? ' done' : '') + (e.beat === 4 || e.beat === 6 ? ' mark' : '')} style={{ flexGrow: e.beats }}>
+          <span key={i} className={'relax-swara' + (i === sounding ? ' on' : '') + (done ? ' done' : '') + (line.talam?.marks.includes(e.beat) ? ' mark' : '')} style={{ flexGrow: e.beats }}>
             {e.notes[0].name}{' ,'.repeat(e.beats - 1)}
           </span>
         );
@@ -269,9 +281,7 @@ export default function RelaxMode({ piano }) {
 
       <div className="song-option">
         <span className="option-label">Raga</span>
-        {Object.entries(RAGAS).map(([id, rg]) => (
-          <button key={id} className={raga === id ? 'active' : ''} disabled={active} onClick={() => pickRaga(id)}>{rg.name}</button>
-        ))}
+        <RagaSelect raga={raga} disabled={active} onPick={pickRaga} />
       </div>
       <div className="song-option">
         <span className="option-label">Mode</span>

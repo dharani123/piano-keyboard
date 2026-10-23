@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { engine } from '../../audio/engine.js';
-import { bySemitone } from '../../data/keymap.js';
+import { keyAt } from '../../data/keymap.js';
 import { SONG_LIBRARY } from '../../songs/library.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
 import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, SWARA_NAMES, carnaticSongs } from '../../songs/carnatic.js';
 import { PASS_STARS } from '../../lessons/progress.js';
 import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
+import RagaSelect from './RagaSelect.jsx';
 import FallingNotes, { FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 import { createPlay, press, advance, score, pendingGroup, pitchKey } from '../../songs/player.js';
 import { starsForAccuracy } from '../../lessons/rhythm.js';
@@ -60,12 +61,17 @@ export default function SongsMode({ piano, kind }) {
   const allSongs = kind === 'carnatic' ? carnatic : [...SONG_LIBRARY, ...mySongs];
   const song = allSongs.find(s => s.id === songId) ?? allSongs[0];
   const speeds = song.carnatic ? CARNATIC_SPEEDS : SPEEDS;
+  // Mel/Mandra Sthayi slide the keys two places while they're picked
+  const layout = song.layout ?? 0;
+  useEffect(() => { piano.setLayout(layout); }, [layout]);
+  useEffect(() => () => pianoRef.current.setLayout(0), []);
 
   // Carnatic exercises open in order, like a teacher: pass one (★★ in either mode) to open the next
   const passed = id => Math.max(best[`${id}:wait`] ?? 0, best[`${id}:play`] ?? 0) >= PASS_STARS;
+  // (an exercise already passed stays open, e.g. after new ones were slotted in before it)
   const isLocked = s => {
     const i = carnatic.findIndex(c => c.id === s.id);
-    return i > 0 && !passed(carnatic[i - 1].id);
+    return i > 0 && !passed(carnatic[i - 1].id) && !passed(s.id);
   };
 
   const nextSong = allSongs[allSongs.indexOf(song) + 1];
@@ -122,7 +128,7 @@ export default function SongsMode({ piano, kind }) {
     const near = play.mode === 'wait'
       ? pendingGroup(play).filter(n => n.beat - play.beat <= 1)
       : play.notes.filter(n => !n.hit && !n.missed && n.beat - play.beat <= 0.5);
-    return near.map(n => codeFor(n.semitone, n.octave - r.base)).filter(Boolean);
+    return near.map(n => codeFor(n.semitone, n.octave - r.base, r.song.layout ?? 0)).filter(Boolean);
   }
 
   function begin() {
@@ -185,7 +191,7 @@ export default function SongsMode({ piano, kind }) {
 
   const r = run.current;
   const fall = phase === 'playing' && r && (
-    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} />
+    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={r.song.layout ?? 0} />
   );
 
   const progress = r ? Math.max(0, Math.min(1, r.play.beat / r.play.totalBeats)) : 0;
@@ -241,14 +247,8 @@ export default function SongsMode({ piano, kind }) {
           <div key={level} className="unit">
             {level === CARNATIC_LEVELS[0] && (
               <div className="carnatic-head">
-                <div className="unit-title">Carnatic · {RAGAS[raga].name}</div>
-                <div className="raga-pick">
-                  {Object.entries(RAGAS).map(([id, r]) => (
-                    <button key={id} className={raga === id ? 'active' : ''} disabled={phase === 'playing'} onClick={() => pickRaga(id)}>
-                      {r.name}
-                    </button>
-                  ))}
-                </div>
+                <div className="unit-title">Carnatic · {RAGAS[raga].number}. {RAGAS[raga].name}</div>
+                <RagaSelect raga={raga} disabled={phase === 'playing'} onPick={pickRaga} />
               </div>
             )}
             <div className={'unit-title' + (CARNATIC_LEVELS.includes(level) ? ' sub' : '')}>{level}</div>
@@ -273,27 +273,41 @@ export default function SongsMode({ piano, kind }) {
 
       <div className="song-setup">
         <div className="lesson-num">
-          {song.carnatic ? `Carnatic · ${RAGAS[raga].name} · Adi talam` : song.level} · {song.mine ? 'from your audio file' : `${song.bpm} BPM`}
+          {song.carnatic ? `Carnatic · ${RAGAS[raga].name} · ${song.talam.name} talam` : song.level} · {song.mine ? 'from your audio file' : `${song.bpm} BPM`}
         </div>
         <h2>{song.title}</h2>
         {song.carnatic && (
           <>
             <div className="swara-map">
-              {SWARA_KEYS.map(sw => {
-                const semi = RAGAS[raga].semitones[sw];
-                const k = bySemitone[semi];
+              {[...SWARA_KEYS.map(sw => [SWARA_NAMES[sw], song.sa + RAGAS[raga].semitones[sw]]), [`S\u0307a`, song.sa + 12]].map(([name, pitch]) => {
+                const semi = ((pitch % 12) + 12) % 12;
+                const rel = Math.floor(pitch / 12);
+                const k = keyAt(semi, rel, layout);
                 return (
-                  <span key={sw} className={BLACK_SEMITONES.includes(semi) ? 'black' : ''}>
-                    <b>{SWARA_NAMES[sw]}</b>{k.note.replace('#', '♯')}<kbd>{k.key}</kbd>
+                  <span key={name} className={BLACK_SEMITONES.includes(semi) ? 'sharp' : ''}>
+                    <b>{name}</b>{rel > 0 ? 'high ' : rel < 0 ? 'low ' : ''}{k.note.replace('#', '♯')}<kbd>{k.key}</kbd>
                   </span>
                 );
               })}
-              <span><b>S{'\u0307'}a</b>high C<kbd>L</kbd></span>
             </div>
             <p className="song-note">
-              One swara per beat, 8 beats to a line (one round of Adi talam). Longer bars are a karvai: hold the swara.
-              Get ★★ to open the next exercise; then try it at 2nd speed.
+              One swara per beat, {song.talam.beats} beats to a line (one round of {song.talam.name} talam).
+              Longer bars are a karvai: hold the swara. Get ★★ to open the next exercise; then try it faster.
             </p>
+            {song.sa !== 0 && (
+              <p className="song-note">
+                Sa sits on {keyAt(((song.sa % 12) + 12) % 12, Math.floor(song.sa / 12), layout).note.replace('#', '♯')} for this
+                exercise (a different sruti), so every swara it needs is on your keyboard.
+              </p>
+            )}
+            {layout !== 0 && (
+              <p className="song-note">
+                {layout > 0
+                  ? <>The keys slide two places right for this exercise, so the low swaras (dot below) fit: <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> = low G A B, middle C is on <kbd>F</kbd>.</>
+                  : <>The keys slide two places left for this exercise, so the high swaras fit: <kbd>A</kbd> = D, up to high A on <kbd>Enter</kbd>.</>}
+                {' '}The piano below shows the new keys; it goes back to normal afterwards.
+              </p>
+            )}
           </>
         )}
         {song.mine && (
@@ -342,7 +356,7 @@ export default function SongsMode({ piano, kind }) {
           : <button className="primary big" onClick={begin}>▶ Start</button>}
 
         <div className="sheet-title">
-          All notes in order <span>· {song.events.length} {song.chords ? 'chords' : 'notes'} · 8 beats per line{song.carnatic ? ' (one Adi talam cycle, 4 | 2 | 2)' : ''}</span>
+          All notes in order <span>· {song.events.length} {song.chords ? 'chords' : 'notes'} · {song.talam?.beats ?? 8} beats per line{song.carnatic ? ` (one ${song.talam.name} talam cycle, ${song.talam.parts})` : ''}</span>
         </div>
         <NoteSheet song={song} />
       </div>

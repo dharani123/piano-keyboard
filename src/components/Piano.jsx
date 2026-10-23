@@ -1,19 +1,19 @@
 import { useLayoutEffect, useRef } from 'react';
-import { KEYS, HIGH_KEYS } from '../data/keymap.js';
+import { LAYOUTS } from '../data/keymap.js';
 import Key from './Key.jsx';
 
-const ALL = [...KEYS, ...HIGH_KEYS];
-const WHITE = ALL.filter(k => k.type === 'white');
-const BLACK = ALL.filter(k => k.type === 'black');
-
-export default function Piano({ hideOutlines, pressed, targetCodes, wrongCode, onDown, onUp }) {
+// shift: which layout the keyboard is in (0 normal, +2 low, -2 high; see keymap.js)
+export default function Piano({ hideOutlines, shift = 0, pressed, targetCodes, wrongCode, onDown, onUp }) {
   const whiteRefs = useRef([]);
   const blackRefs = useRef({});
+  const all = LAYOUTS[shift];
+  const white = all.filter(k => k.type === 'white');
+  const black = all.filter(k => k.type === 'black');
 
   // Centre each black key on the border between its two white keys
   useLayoutEffect(() => {
     function place() {
-      for (const k of BLACK) {
+      for (const k of black) {
         const left = whiteRefs.current[k.after];
         const right = whiteRefs.current[k.after + 1];
         const el = blackRefs.current[k.code];
@@ -24,7 +24,7 @@ export default function Piano({ hideOutlines, pressed, targetCodes, wrongCode, o
     place();
     window.addEventListener('resize', place);
     return () => window.removeEventListener('resize', place);
-  }, []);
+  }, [shift]);
 
   const keyProps = k => ({
     k,
@@ -37,8 +37,8 @@ export default function Piano({ hideOutlines, pressed, targetCodes, wrongCode, o
 
   return (
     <div className={'piano' + (hideOutlines ? ' no-outlines' : '')}>
-      {WHITE.map((k, i) => <Key key={k.code} ref={el => (whiteRefs.current[i] = el)} {...keyProps(k)} />)}
-      {BLACK.map(k => <Key key={k.code} ref={el => (blackRefs.current[k.code] = el)} {...keyProps(k)} />)}
+      {white.map((k, i) => <Key key={k.code} ref={el => (whiteRefs.current[i] = el)} {...keyProps(k)} />)}
+      {black.map(k => <Key key={k.code} ref={el => (blackRefs.current[k.code] = el)} {...keyProps(k)} />)}
     </div>
   );
 }

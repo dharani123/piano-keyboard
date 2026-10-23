@@ -1,58 +1,66 @@
 // semitone = offset from C within the octave.
 // White keys run along the home row with no gap, S D F G H J K = C D E F G A B
-// (hands shifted one key right of typing position); black keys are the top-row
-// keys that fall between them.
-export const KEYS = [
-  { code: 'KeyS', key: 'S', note: 'C',  semitone: 0,  type: 'white' },
-  { code: 'KeyE', key: 'E', note: 'C#', semitone: 1,  type: 'black', after: 0 },
-  { code: 'KeyD', key: 'D', note: 'D',  semitone: 2,  type: 'white' },
-  { code: 'KeyR', key: 'R', note: 'D#', semitone: 3,  type: 'black', after: 1 },
-  { code: 'KeyF', key: 'F', note: 'E',  semitone: 4,  type: 'white' },
-  { code: 'KeyG', key: 'G', note: 'F',  semitone: 5,  type: 'white' },
-  { code: 'KeyY', key: 'Y', note: 'F#', semitone: 6,  type: 'black', after: 3 },
-  { code: 'KeyH', key: 'H', note: 'G',  semitone: 7,  type: 'white' },
-  { code: 'KeyU', key: 'U', note: 'G#', semitone: 8,  type: 'black', after: 4 },
-  { code: 'KeyJ', key: 'J', note: 'A',  semitone: 9,  type: 'white' },
-  { code: 'KeyI', key: 'I', note: 'A#', semitone: 10, type: 'black', after: 5 },
-  { code: 'KeyK', key: 'K', note: 'B',  semitone: 11, type: 'white' },
-];
+// (hands shifted one key right of typing position), carrying on into the next
+// octave on L ; ' Enter = C D E F. Black keys are the letter-row keys that fall
+// between them: E R · Y U I = C# D# · F# G# A#, P [ = the next C# D#.
+//
+// For exercises that need notes outside that range the whole layout slides by
+// two white keys (`shift`): +2 puts C on F, so A S D = low G A B; -2 puts the
+// row on D E F … up to the high A. Only letters play notes.
 
-// The home row carries on into the next octave: L ; ' Enter = C D E F, with P [ as
-// its C# D#. `after` counts white keys from S, so these sit after the main seven.
-export const HIGH_KEYS = [
-  { code: 'KeyL',         key: 'L',     note: 'C',  semitone: 0, octaveUp: 1, type: 'white' },
-  { code: 'KeyP',         key: 'P',     note: 'C#', semitone: 1, octaveUp: 1, type: 'black', after: 7 },
-  { code: 'Semicolon',    key: ';',     note: 'D',  semitone: 2, octaveUp: 1, type: 'white' },
-  { code: 'BracketLeft',  key: '[',     note: 'D#', semitone: 3, octaveUp: 1, type: 'black', after: 8 },
-  { code: 'Quote',        key: "'",     note: 'E',  semitone: 4, octaveUp: 1, type: 'white' },
-  { code: 'Enter',        key: 'Enter', note: 'F',  semitone: 5, octaveUp: 1, type: 'white' },
+const HOME = [
+  ['KeyA', 'A'], ['KeyS', 'S'], ['KeyD', 'D'], ['KeyF', 'F'], ['KeyG', 'G'], ['KeyH', 'H'],
+  ['KeyJ', 'J'], ['KeyK', 'K'], ['KeyL', 'L'], ['Semicolon', ';'], ['Quote', "'"], ['Enter', 'Enter'],
 ];
+// The black key between HOME[i] and HOME[i + 1] is UPPER[i + 1]
+const UPPER = [
+  ['KeyQ', 'Q'], ['KeyW', 'W'], ['KeyE', 'E'], ['KeyR', 'R'], ['KeyT', 'T'], ['KeyY', 'Y'],
+  ['KeyU', 'U'], ['KeyI', 'I'], ['KeyO', 'O'], ['KeyP', 'P'], ['BracketLeft', '['], ['BracketRight', ']'],
+];
+const WHITE_STEPS = [0, 2, 4, 5, 7, 9, 11];
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export const SHIFTS = [0, 2, -2];
+
+// Every key of a layout in pitch order; `after` = index of the white key a black one follows
+function buildLayout(shift) {
+  const keys = [];
+  let whites = 0;
+  HOME.forEach(([code, key], i) => {
+    if (shift === 0 && i === 0) return; // A stays silent in the normal layout
+    const w = i - 1 - shift; // white keys from middle C
+    const octaveUp = Math.floor(w / 7);
+    const semitone = WHITE_STEPS[w - octaveUp * 7];
+    keys.push({ code, key, note: NAMES[semitone], semitone, octaveUp, type: 'white' });
+    whites++;
+    if (i < HOME.length - 1 && semitone !== 4 && semitone !== 11) {
+      const [bCode, bKey] = UPPER[i + 1];
+      keys.push({ code: bCode, key: bKey, note: NAMES[semitone + 1], semitone: semitone + 1, octaveUp, type: 'black', after: whites - 1 });
+    }
+  });
+  return keys;
+}
+export const LAYOUTS = Object.fromEntries(SHIFTS.map(s => [s, buildLayout(s)]));
+const BY_CODE = Object.fromEntries(SHIFTS.map(s => [s, Object.fromEntries(LAYOUTS[s].map(k => [k.code, k]))]));
+const BY_PITCH = Object.fromEntries(SHIFTS.map(s => [s, Object.fromEntries(LAYOUTS[s].map(k => [k.octaveUp * 12 + k.semitone, k]))]));
+
+// The key playing a code in a layout, or undefined
+export const keyForCode = (code, shift = 0) => BY_CODE[shift][code];
+// The key for a note `rel` octaves from middle C's octave, or undefined
+export const keyAt = (semitone, rel, shift = 0) => BY_PITCH[shift][rel * 12 + semitone];
+// Pitches (semitones from middle C) a layout can play
+export const playable = shift => new Set(LAYOUTS[shift].map(k => k.octaveUp * 12 + k.semitone));
+
+// Keys that play a note in some layout; a key not in the current layout just stays quiet
+const NOTE_CODES = new Set(SHIFTS.flatMap(s => LAYOUTS[s].map(k => k.code)));
+export const noteCodeFor = code => (NOTE_CODES.has(code) ? code : null);
+
+// The normal layout, as lessons and ear training use it
+export const byCode = BY_CODE[0];
+export const KEYS = LAYOUTS[0].filter(k => k.octaveUp === 0);
+export const HIGH_KEYS = LAYOUTS[0].filter(k => k.octaveUp === 1);
 export const HIGH_C = HIGH_KEYS[0];
 // semitone → its key in the higher octave (C to F only)
 export const highBySemitone = Object.fromEntries(HIGH_KEYS.map(k => [k.semitone, k]));
-
-// The number row is a second, wider keyboard: ` 1 2 = G A B below, 3–9 = C–B (same
-// octave as ASDF/JKL), 0 - = Backspace = C D E F above. F-keys are the black keys:
-// Fn sits between digit n and n+1 (F3 = C#). No F-key falls between ` and 1, so
-// that low G# is missing. `shows` = the on-screen key with the same note name.
-const top = (code, note, semitone, octaveUp, shows) => ({ code, note, semitone, octaveUp, shows });
-export const TOP_ROW = [
-  top('Backquote', 'G', 7, -1, 'KeyH'), top('Digit1', 'A', 9, -1, 'KeyJ'), top('F1', 'A#', 10, -1, 'KeyI'),
-  top('Digit2', 'B', 11, -1, 'KeyK'),
-  top('Digit3', 'C', 0, 0, 'KeyS'), top('F3', 'C#', 1, 0, 'KeyE'), top('Digit4', 'D', 2, 0, 'KeyD'),
-  top('F4', 'D#', 3, 0, 'KeyR'), top('Digit5', 'E', 4, 0, 'KeyF'), top('Digit6', 'F', 5, 0, 'KeyG'),
-  top('F6', 'F#', 6, 0, 'KeyY'), top('Digit7', 'G', 7, 0, 'KeyH'), top('F7', 'G#', 8, 0, 'KeyU'),
-  top('Digit8', 'A', 9, 0, 'KeyJ'), top('F8', 'A#', 10, 0, 'KeyI'), top('Digit9', 'B', 11, 0, 'KeyK'),
-  top('Digit0', 'C', 0, 1, 'KeyL'), top('F10', 'C#', 1, 1, 'KeyP'), top('Minus', 'D', 2, 1, 'Semicolon'),
-  top('F11', 'D#', 3, 1, 'BracketLeft'), top('Equal', 'E', 4, 1, 'Quote'), top('Backspace', 'F', 5, 1, 'Enter'),
-];
-
-export const byCode = Object.fromEntries([...KEYS, ...HIGH_KEYS, ...TOP_ROW].map(k => [k.code, k]));
-// The key code a keyboard key plays, or null
-export const noteCodeFor = code => (byCode[code] ? code : null);
-// The on-screen piano key that lights up for a played key
-export const shownCode = code => byCode[code]?.shows ?? code;
-
 export const bySemitone = Object.fromEntries(KEYS.map(k => [k.semitone, k]));
 export const SEMITONES = Object.fromEntries(KEYS.map(k => [k.note, k.semitone]));
 

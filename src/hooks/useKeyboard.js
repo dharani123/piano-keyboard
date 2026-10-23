@@ -48,7 +48,7 @@ export function useKeyboard(handlers) {
   }, []);
 }
 
-// Shift + 1–6 picks a voice; plain digits are notes on the number row
+// Shift + 1–6 picks a voice
 const voiceDigit = (code, shift) => shift && code.match(/^Digit([1-6])$/);
 const noteFor = (code, shift) => (voiceDigit(code, shift) ? null : noteCodeFor(code));
 

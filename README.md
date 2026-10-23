@@ -15,7 +15,7 @@ Open http://localhost:5173.
 
 - Home row `S D F G H J K` = C D E F G A B, then `L ; ' Enter` = high C D E F
 - Black keys: `E R` · `Y U I` · `P [`
-- Number row: a second, two-octave keyboard (`3`–`9` = C–B)
+- Only letter keys play notes. Exercises that need lower or higher notes (Mel/Mandra Sthayi) slide the layout two keys for that exercise: `A S D` = low G A B, or the row runs D up to high A
 - `Z` / `X` octave down/up · `←` / `→` transpose · `Space` sustain
 
 ## What's inside

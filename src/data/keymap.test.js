@@ -1,59 +1,60 @@
 import { describe, it, expect } from 'vitest';
-import { noteCodeFor, byCode, shownCode, TOP_ROW } from './keymap.js';
+import { noteCodeFor, byCode, keyForCode, keyAt, LAYOUTS, playable } from './keymap.js';
 
-describe('noteCodeFor', () => {
-  it('keeps home-row and top-row keys as they are', () => {
-    expect(noteCodeFor('KeyS')).toBe('KeyS');
-    expect(noteCodeFor('KeyY')).toBe('KeyY');
-  });
+const notes = (shift, codes) => codes.map(c => keyForCode(c, shift)?.note ?? '-').join(' ');
+const HOME = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote', 'Enter'];
+const UPPER = ['KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'BracketLeft', 'BracketRight'];
 
-  it('makes the number row G A B | C–B | C D E F across three octaves', () => {
-    const row = ['Backquote', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7',
-      'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'Backspace'];
-    expect(row.map(c => byCode[c].note).join(' ')).toBe('G A B C D E F G A B C D E F');
-    expect(row.map(c => byCode[c].octaveUp).join('')).toBe([-1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1].join(''));
-  });
-
-  it('puts each sharp on the F-key just after its digit (F3 = C#)', () => {
-    const f = ['F1', 'F3', 'F4', 'F6', 'F7', 'F8', 'F10', 'F11'];
-    expect(f.map(c => byCode[c].note).join(' ')).toBe('A# C# D# F# G# A# C# D#');
-  });
-
-  it('runs upward in half steps with no repeats', () => {
-    const pitches = TOP_ROW.map(k => k.octaveUp * 12 + k.semitone);
-    // only the low G# (no F-key between ` and 1) is skipped
-    expect(pitches).toEqual([-5, -3, -2, -1, ...Array.from({ length: 18 }, (_, i) => i)]);
-  });
-
-  it('lights the on-screen key with the same note name', () => {
-    expect(shownCode('Digit3')).toBe('KeyS');
-    expect(shownCode('Digit0')).toBe('KeyL');
-    expect(shownCode('F6')).toBe('KeyY');
-    expect(shownCode('Backspace')).toBe('Enter');
-    expect(shownCode('F11')).toBe('BracketLeft');
-    expect(shownCode('KeyK')).toBe('KeyK');
-  });
-
+describe('normal layout', () => {
   it('lays C–B along S D F G H J K with no gap', () => {
     expect(['KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK'].map(c => byCode[c].note).join(' ')).toBe('C D E F G A B');
     expect(['KeyE', 'KeyR', 'KeyY', 'KeyU', 'KeyI'].map(c => byCode[c].note).join(' ')).toBe('C# D# F# G# A#');
-    expect(noteCodeFor('KeyA')).toBeNull();
+    expect(byCode.KeyA).toBeUndefined();
   });
 
   it("continues into the next octave on L ; ' Enter, sharps on P [", () => {
     const high = ['KeyL', 'KeyP', 'Semicolon', 'BracketLeft', 'Quote', 'Enter'].map(c => byCode[c]);
     expect(high.map(k => k.note).join(' ')).toBe('C C# D D# E F');
     expect(high.every(k => k.octaveUp === 1)).toBe(true);
-    expect(noteCodeFor('BracketRight')).toBeNull();
+    expect(byCode.BracketRight).toBeUndefined();
   });
 
-  it("plays C one octave up on 'L'", () => {
-    expect(noteCodeFor('KeyL')).toBe('KeyL');
-    expect(byCode.KeyL).toMatchObject({ note: 'C', semitone: 0, octaveUp: 1 });
+  it('runs middle C to high F in half steps', () => {
+    expect([...playable(0)].sort((a, b) => a - b)).toEqual(Array.from({ length: 18 }, (_, i) => i));
+  });
+});
+
+describe('shifted layouts', () => {
+  it('+2 puts middle C on F and the low G A B on A S D', () => {
+    expect(notes(2, HOME)).toBe('G A B C D E F G A B C D');
+    expect(notes(2, UPPER)).toBe('G# A# - C# D# - F# G# A# - C#');
+    expect(keyAt(0, 0, 2).code).toBe('KeyF');
+    expect(keyAt(7, -1, 2).code).toBe('KeyA');
   });
 
-  it('ignores keys that play nothing', () => {
+  it('-2 runs the row from D up to the high A', () => {
+    expect(notes(-2, HOME)).toBe('D E F G A B C D E F G A');
+    expect(notes(-2, UPPER)).toBe('D# - F# G# A# - C# D# - F# G#');
+    expect(keyAt(7, 1, -2).code).toBe('Quote');
+  });
+
+  it('places every black key between its two white keys', () => {
+    for (const keys of Object.values(LAYOUTS)) {
+      const whites = keys.filter(k => k.type === 'white');
+      for (const b of keys.filter(k => k.type === 'black')) {
+        expect(whites[b.after].octaveUp * 12 + whites[b.after].semitone + 1).toBe(b.octaveUp * 12 + b.semitone);
+      }
+    }
+  });
+});
+
+describe('noteCodeFor', () => {
+  it('only letters (and ; \' [ ] Enter) play notes', () => {
+    expect(noteCodeFor('KeyS')).toBe('KeyS');
+    expect(noteCodeFor('KeyA')).toBe('KeyA');
+    expect(noteCodeFor('Digit3')).toBeNull();
+    expect(noteCodeFor('F3')).toBeNull();
+    expect(noteCodeFor('Backquote')).toBeNull();
     expect(noteCodeFor('KeyZ')).toBeNull();
-    expect(noteCodeFor('F5')).toBeNull();
   });
 });

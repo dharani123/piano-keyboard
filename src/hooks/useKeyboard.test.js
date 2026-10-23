@@ -9,10 +9,11 @@ function run(code, shift = false) {
 }
 
 describe('keyAction', () => {
-  it('plays number-row and F-keys as their own notes', () => {
-    expect(run('Digit1')).toEqual([['noteDown', 'Digit1']]);
-    expect(run('Backspace')).toEqual([['noteDown', 'Backspace']]);
-    expect(run('F11')).toEqual([['noteDown', 'F11']]);
+  it('plays letter keys, and nothing on the number row or F-keys', () => {
+    expect(run('KeyS')).toEqual([['noteDown', 'KeyS']]);
+    expect(run('Digit1')).toEqual([]);
+    expect(run('Backspace')).toEqual([]);
+    expect(run('F11')).toEqual([]);
   });
 
   it('transposes with the left/right arrows, and [ is now a note', () => {
@@ -26,14 +27,7 @@ describe('keyAction', () => {
     expect(run('Digit6', true)).toEqual([['voice', 5]]);
   });
 
-  it('no longer switches voice with a plain digit', () => {
-    expect(run('Digit5')).toEqual([['noteDown', 'Digit5']]);
-  });
-
-  it('ignores F-keys that fall between E–F and B–C', () => {
-    expect(run('F2')).toEqual([]);
-    expect(run('F5')).toEqual([]);
-    expect(run('F9')).toEqual([]);
-    expect(run('F12')).toEqual([]);
+  it('does nothing on a plain digit', () => {
+    expect(run('Digit5')).toEqual([]);
   });
 });

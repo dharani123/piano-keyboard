@@ -1,18 +1,18 @@
 import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { bySemitone, highBySemitone } from '../../data/keymap.js';
+import { keyAt } from '../../data/keymap.js';
 
 export const FALL_HEIGHT = 230;
 export const PX_PER_SECOND = 110;
 const BLACK_SEMITONES = [1, 3, 6, 8, 10];
 
-// The on-screen key for a note, `rel` octaves above the song's start octave
-export const codeFor = (semitone, rel) => (rel === 0 ? bySemitone[semitone] : highBySemitone[semitone])?.code;
+// The on-screen key for a note, `rel` octaves above the song's start octave, in keyboard layout `shift`
+export const codeFor = (semitone, rel, shift = 0) => keyAt(semitone, rel, shift)?.code;
 
 // Notes falling above the piano, each in the column of its key.
 // play = a player.js state; base = the octave the song started in.
 // gentle: missed notes just fade instead of turning red (Relax mode).
-export default function FallingNotes({ slot, play, base, spb, gentle = false }) {
+export default function FallingNotes({ slot, play, base, spb, shift = 0, gentle = false }) {
   const [lanes, setLanes] = useState({});
 
   // Lane positions: line each column up with its key on the piano below
@@ -30,14 +30,14 @@ export default function FallingNotes({ slot, play, base, spb, gentle = false }) 
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [slot]);
+  }, [slot, shift]);
 
   if (!slot) return null;
   const pxPerBeat = PX_PER_SECOND * spb;
   return createPortal(
     <div className="fall" style={{ height: FALL_HEIGHT }}>
       {play.notes.map((n, i) => {
-        const lane = lanes[codeFor(n.semitone, n.octave - base)];
+        const lane = lanes[codeFor(n.semitone, n.octave - base, shift)];
         if (!lane) return null;
         const bottom = (n.beat - play.beat) * pxPerBeat;
         const height = Math.max(n.beats * pxPerBeat - 3, 8);
