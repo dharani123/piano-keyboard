@@ -26,7 +26,7 @@ Open http://localhost:5173.
 - **Carnatic Music**: Sarali and Janta varisais in Mayamalavagowla or Shankarabharanam, labelled in swaras (Sa Ri Ga Ma Pa Da Ni)
 - **Carnatic Relax**: the varisais in the traditional order with a tanpura drone, listen-then-play and no scores
 
-Progress is saved in your browser (localStorage).
+Progress is saved in `saved-progress.json` (through the dev server) as well as the browser, so commit it to carry your progress to another machine. Songs imported from audio stay in the browser only.
 
 ## Credits
 

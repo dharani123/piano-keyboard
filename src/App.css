@@ -398,7 +398,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   font-weight: 700;
   box-sizing: border-box;
 }
-.fall-note.black { background: #24262c; }
+.fall-note.sharp { background: #24262c; } /* not .black: that is the piano key style */
 .fall-note.hit { background: #3a3d45; border-color: #9a9ea8; color: #c4c7ce; }
 .fall-note.holding { box-shadow: 0 0 8px rgba(154, 158, 168, .45); }
 .fall-note.missed { background: #2e2424; border-color: #5e4646; color: #7a5a5a; }

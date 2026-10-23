@@ -14,9 +14,9 @@ import { starsForAccuracy } from '../../lessons/rhythm.js';
 
 const COUNT_IN = 4;
 const SPEEDS = [0.5, 0.75, 1];
-// Carnatic adds 2nd speed: two swaras per beat
-const CARNATIC_SPEEDS = [0.5, 0.75, 1, 2];
-const speedLabel = (v, carnatic) => (carnatic && v === 1 ? '1st speed' : carnatic && v === 2 ? '2nd speed' : `${Math.round(v * 100)}%`);
+// Carnatic adds 1.25 and 1.5 speed (stepping stones) and 2nd speed: two swaras per beat
+const CARNATIC_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const speedLabel = (v, carnatic) => (carnatic && v === 1 ? '1st speed' : carnatic && (v === 1.25 || v === 1.5) ? `${v} speed` : carnatic && v === 2 ? '2nd speed' : `${Math.round(v * 100)}%`);
 // kind = which tab this is: 'western' or 'carnatic'
 const LEVELS = { western: ['Easy', 'Medium', 'Chords', 'My songs'], carnatic: CARNATIC_LEVELS };
 const BLACK_SEMITONES = [1, 3, 6, 8, 10];
@@ -67,6 +67,8 @@ export default function SongsMode({ piano, kind }) {
     const i = carnatic.findIndex(c => c.id === s.id);
     return i > 0 && !passed(carnatic[i - 1].id);
   };
+
+  const nextSong = allSongs[allSongs.indexOf(song) + 1];
 
   function pickSong(s) {
     setSongId(s.id);
@@ -219,6 +221,9 @@ export default function SongsMode({ piano, kind }) {
           </p>
           <div className="result-actions">
             <button className="primary" onClick={begin}>↻ Play again</button>
+            {nextSong && !isLocked(nextSong) && (
+              <button onClick={() => { quit(); pickSong(nextSong); }}>Next: {nextSong.title} →</button>
+            )}
             <button onClick={quit}>Pick another song</button>
           </div>
         </div>

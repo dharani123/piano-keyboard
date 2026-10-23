@@ -43,7 +43,7 @@ export default function FallingNotes({ slot, play, base, spb, gentle = false }) 
         const height = Math.max(n.beats * pxPerBeat - 3, 8);
         if (bottom > FALL_HEIGHT || bottom + height < 0) return null;
         const black = BLACK_SEMITONES.includes(n.semitone);
-        const cls = ['fall-note', black && 'black', n.hit && 'hit', n.holding && 'holding', n.missed && (gentle ? 'gone' : 'missed')]
+        const cls = ['fall-note', black && 'sharp', n.hit && 'hit', n.holding && 'holding', n.missed && (gentle ? 'gone' : 'missed')]
           .filter(Boolean).join(' ');
         return (
           <div key={i} className={cls} style={{ left: lane.left + 3, width: lane.width - 6, bottom, height }}>
