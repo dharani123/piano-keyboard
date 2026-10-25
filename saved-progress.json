@@ -33,6 +33,33 @@
     "pos": 68
   },
   "desk-piano-size": "big",
+  "desk-piano-progress": {
+    "unlockAll": false,
+    "stars": {
+      "keys": 2,
+      "alphabet": 2,
+      "fingers": 2,
+      "note-finder": 2,
+      "beat": 3,
+      "long-notes": 2,
+      "rests": 3,
+      "eighths": 2,
+      "half-whole": 2,
+      "steps-skips": 3,
+      "c-position": 2,
+      "ear-cg": 3,
+      "ear-e": 3,
+      "ear-d": 2,
+      "ear-f": 2,
+      "ear-a": 2,
+      "ear-b": 2,
+      "ear-neighbours": 2,
+      "ear-whites": 2,
+      "ear-fs": 2,
+      "ear-cs-ds": 1,
+      "song-twinkle": 2
+    }
+  },
   "desk-piano-ear": {
     "notes": {
       "0": {
@@ -601,33 +628,6 @@
     "today": {
       "day": "2026-10-23",
       "rounds": 200
-    }
-  },
-  "desk-piano-progress": {
-    "unlockAll": false,
-    "stars": {
-      "keys": 2,
-      "alphabet": 2,
-      "fingers": 2,
-      "note-finder": 2,
-      "beat": 3,
-      "long-notes": 2,
-      "rests": 3,
-      "eighths": 2,
-      "half-whole": 2,
-      "steps-skips": 3,
-      "c-position": 2,
-      "ear-cg": 3,
-      "ear-e": 3,
-      "ear-d": 2,
-      "ear-f": 2,
-      "ear-a": 2,
-      "ear-b": 2,
-      "ear-neighbours": 2,
-      "ear-whites": 2,
-      "ear-fs": 2,
-      "ear-cs-ds": 1,
-      "song-twinkle": 2
     }
   },
   "desk-piano-raga": "kanakangi"

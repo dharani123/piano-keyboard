@@ -1,5 +1,6 @@
 import { instrumentById } from './instruments.js';
 import { VoiceManager } from './voiceManager.js';
+import { pluckSamples } from './pluck.js';
 
 // Signal chain:
 //   voices → bus ─┬─────────────────────────→ master → compressor → speakers
@@ -65,6 +66,7 @@ function applySettings() {
 
 function startVoice(freq, instrumentId, now = ctx.currentTime) {
   const inst = instrumentById[instrumentId];
+  if (inst.pluck) return startPluck(freq, inst, now);
   const { env, filter: f } = inst;
   const totalGain = inst.partials.reduce((sum, p) => sum + p.gain, 0);
   const peak = 0.6 / totalGain;
@@ -116,10 +118,6 @@ function startVoice(freq, instrumentId, now = ctx.currentTime) {
     osc.type = p.type ?? 'sine';
     osc.frequency.value = freq * p.ratio;
     osc.detune.value = p.detune ?? 0;
-    if (inst.bend) {
-      osc.detune.setValueAtTime((p.detune ?? 0) + inst.bend.cents, now);
-      osc.detune.linearRampToValueAtTime(p.detune ?? 0, now + inst.bend.time);
-    }
     if (vibratoDepth) vibratoDepth.connect(osc.detune);
     g.gain.setValueAtTime(p.gain, now);
     if (p.fade) g.gain.exponentialRampToValueAtTime(0.0001, now + p.fade);
@@ -132,6 +130,55 @@ function startVoice(freq, instrumentId, now = ctx.currentTime) {
     if (end) s.stop(end);
   }
   return { out, sources, release: env.release };
+}
+
+// Rendered plucks, a few slightly different ones per instrument and pitch so
+// repeated notes don't sound copy-pasted; a key only costs its first presses
+const PLUCK_TAKES = 3;
+const pluckCache = new Map();
+function pluckBuffer(freq, inst) {
+  const key = `${inst.id}:${freq.toFixed(2)}:${Math.floor(Math.random() * PLUCK_TAKES)}`;
+  if (!pluckCache.has(key)) {
+    const samples = pluckSamples(freq, ctx.sampleRate, inst.pluck);
+    const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+    buffer.copyToChannel(samples, 0);
+    pluckCache.set(key, buffer);
+  }
+  return pluckCache.get(key);
+}
+
+// A plucked-string note: rendered samples through the body and tone filters
+function startPluck(freq, inst, now) {
+  const { env, filter: f, body } = inst;
+  const end = now + inst.pluck.seconds;
+  const source = ctx.createBufferSource();
+  source.buffer = pluckBuffer(freq, inst);
+  if (inst.settle) {
+    source.detune.setValueAtTime(inst.settle.cents, now);
+    source.detune.setTargetAtTime(0, now, inst.settle.time);
+  }
+
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0, now);
+  out.gain.linearRampToValueAtTime(0.45 + Math.random() * 0.1, now + env.attack); // no two plucks quite as loud
+  out.connect(bus);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.Q.value = f.q;
+  filter.frequency.setValueAtTime(Math.min(freq * f.from, 18000), now);
+  filter.frequency.exponentialRampToValueAtTime(Math.min(Math.max(freq * f.to, 300), 18000), now + f.time);
+  filter.connect(out);
+
+  const resonance = ctx.createBiquadFilter();
+  resonance.type = 'peaking';
+  resonance.frequency.value = body.freq;
+  resonance.gain.value = body.gain;
+  source.connect(resonance).connect(filter);
+
+  source.start(now);
+  source.stop(end);
+  return { out, sources: [source], release: env.release };
 }
 
 function stopVoice(voice, now = ctx.currentTime) {
