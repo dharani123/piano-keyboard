@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { noteColourVars } from '../data/colours.js';
 
 const Key = forwardRef(function Key({ k, pressed, target, wrong, onDown, onUp }, ref) {
   const className = [
@@ -14,6 +15,7 @@ const Key = forwardRef(function Key({ k, pressed, target, wrong, onDown, onUp },
       ref={ref}
       data-code={k.code}
       className={className}
+      style={noteColourVars(k.semitone)}
       onPointerDown={e => { e.preventDefault(); onDown(k.code); }}
       onPointerUp={() => onUp(k.code)}
       onPointerLeave={() => onUp(k.code)}

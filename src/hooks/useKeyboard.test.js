@@ -22,9 +22,10 @@ describe('keyAction', () => {
     expect(run('BracketLeft')).toEqual([['noteDown', 'BracketLeft']]);
   });
 
-  it('switches voice with Shift + 1–6', () => {
+  it('switches voice with Shift + 1–7', () => {
     expect(run('Digit1', true)).toEqual([['voice', 0]]);
-    expect(run('Digit6', true)).toEqual([['voice', 5]]);
+    expect(run('Digit7', true)).toEqual([['voice', 6]]);
+    expect(run('Digit8', true)).toEqual([]);
   });
 
   it('does nothing on a plain digit', () => {

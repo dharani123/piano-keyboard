@@ -48,8 +48,8 @@ export function useKeyboard(handlers) {
   }, []);
 }
 
-// Shift + 1–6 picks a voice
-const voiceDigit = (code, shift) => shift && code.match(/^Digit([1-6])$/);
+// Shift + 1–7 picks a voice
+const voiceDigit = (code, shift) => shift && code.match(/^Digit([1-7])$/);
 const noteFor = (code, shift) => (voiceDigit(code, shift) ? null : noteCodeFor(code));
 
 export function keyAction(code, shift = false) {

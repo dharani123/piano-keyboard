@@ -10,6 +10,8 @@ import VoicePanel from './components/VoicePanel.jsx';
 import Controls from './components/Controls.jsx';
 import Lessons from './components/lessons/Lessons.jsx';
 import { effectiveTranspose } from './ear/transposeLock.js';
+import { COLOUR_MODES, loadColourMode, saveColourMode } from './data/colours.js';
+import { SIZE_MODES, loadSizeMode, saveSizeMode } from './data/pianoSize.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -29,6 +31,8 @@ export default function App() {
   const [lessonSlot, setLessonSlot] = useState(null); // element under the piano where exercises render
   const [fallSlot, setFallSlot] = useState(null); // element above the piano where song notes fall
   const [layout, setLayout] = useState(0); // keyboard layout shift: 0, +2 (low notes) or -2 (high), see keymap.js
+  const [colourMode, setColourMode] = useState(loadColourMode);
+  const [sizeMode, setSizeMode] = useState(loadSizeMode);
   const [hideOutlines, setHideOutlines] = useState(() => {
     try { return localStorage.getItem('desk-piano-hide-outlines') === '1'; } catch { return false; }
   });
@@ -47,6 +51,12 @@ export default function App() {
   useEffect(() => { engine.setSustain(sustainOn); }, [sustainOn]);
   // A key held across a layout change would never get its key-up note
   useEffect(() => releaseAll(), [layout]);
+  useEffect(() => saveColourMode(colourMode), [colourMode]);
+  useEffect(() => {
+    saveSizeMode(sizeMode);
+    // black keys and falling-note lanes are positioned from key sizes on resize
+    window.dispatchEvent(new Event('resize'));
+  }, [sizeMode]);
   useEffect(() => {
     try { localStorage.setItem('desk-piano-hide-outlines', hideOutlines ? '1' : '0'); } catch { /* storage blocked */ }
   }, [hideOutlines]);
@@ -117,7 +127,7 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app colours-${colourMode}${colourMode === 'colour' ? ' colours-bw' : ''} size-${sizeMode}`}>
       <div className="instrument">
         <header className="top">
           <div className="brand">
@@ -149,10 +159,18 @@ export default function App() {
           />
         </div>
 
-        <label className="piano-option">
-          <input type="checkbox" checked={hideOutlines} onChange={e => setHideOutlines(e.target.checked)} />
-          Hide outlines
-        </label>
+        <div className="piano-options">
+          <select className="piano-option" value={sizeMode} onChange={e => setSizeMode(e.target.value)} aria-label="Piano size">
+            {SIZE_MODES.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+          <select className="piano-option" value={colourMode} onChange={e => setColourMode(e.target.value)} aria-label="Piano colours">
+            {COLOUR_MODES.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+          <label className="piano-option">
+            <input type="checkbox" checked={hideOutlines} onChange={e => setHideOutlines(e.target.checked)} />
+            Hide outlines
+          </label>
+        </div>
         <div className="fall-slot" ref={setFallSlot} />
         <Piano
           hideOutlines={hideOutlines}

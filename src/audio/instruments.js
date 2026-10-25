@@ -11,6 +11,7 @@
 //      like a real piano string), release (seconds after key up)
 // filter: low-pass cutoff as a multiple of the note frequency, sweeping from
 //         `from` to `to` over `time` seconds
+// bend: each note starts `cents` off pitch and slides in over `time` seconds
 export const INSTRUMENTS = [
   {
     id: 'piano',
@@ -86,6 +87,24 @@ export const INSTRUMENTS = [
     ],
     env: { attack: 0.002, decay: 1, sustain: 0.3, tail: 5, release: 1.5 },
     filter: { from: 20, to: 20, time: 0.1, q: 0.5 },
+  },
+  {
+    // Plucked string with the buzzy jawari bridge: bright, rich harmonics that
+    // mellow as the string rings, and a small slide into pitch off the fret
+    id: 'veena',
+    name: 'Veena',
+    partials: [
+      { ratio: 1, gain: 1 },
+      { ratio: 1, gain: 0.35, type: 'sawtooth', detune: 3 },
+      { ratio: 2, gain: 0.5 },
+      { ratio: 3, gain: 0.3, fade: 2.5 },
+      { ratio: 4, gain: 0.2, fade: 1.5 },
+      { ratio: 6, gain: 0.12, fade: 0.8 },
+      { ratio: 9, gain: 0.08, fade: 0.3 },
+    ],
+    env: { attack: 0.004, decay: 0.6, sustain: 0.4, tail: 4.5, release: 0.4 },
+    filter: { from: 14, to: 3, time: 1.8, q: 4 },
+    bend: { cents: -35, time: 0.07 },
   },
 ];
 

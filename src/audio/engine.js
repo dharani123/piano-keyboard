@@ -116,6 +116,10 @@ function startVoice(freq, instrumentId, now = ctx.currentTime) {
     osc.type = p.type ?? 'sine';
     osc.frequency.value = freq * p.ratio;
     osc.detune.value = p.detune ?? 0;
+    if (inst.bend) {
+      osc.detune.setValueAtTime((p.detune ?? 0) + inst.bend.cents, now);
+      osc.detune.linearRampToValueAtTime(p.detune ?? 0, now + inst.bend.time);
+    }
     if (vibratoDepth) vibratoDepth.connect(osc.detune);
     g.gain.setValueAtTime(p.gain, now);
     if (p.fade) g.gain.exponentialRampToValueAtTime(0.0001, now + p.fade);

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { keyAt } from '../../data/keymap.js';
+import { noteColourVars } from '../../data/colours.js';
 
 export const FALL_HEIGHT = 230;
 export const PX_PER_SECOND = 110;
@@ -46,7 +47,7 @@ export default function FallingNotes({ slot, play, base, spb, shift = 0, gentle 
         const cls = ['fall-note', black && 'sharp', n.hit && 'hit', n.holding && 'holding', n.missed && (gentle ? 'gone' : 'missed')]
           .filter(Boolean).join(' ');
         return (
-          <div key={i} className={cls} style={{ left: lane.left + 3, width: lane.width - 6, bottom, height }}>
+          <div key={i} className={cls} style={{ ...noteColourVars(n.semitone), left: lane.left + 3, width: lane.width - 6, bottom, height }}>
             {n.name.replace('#', '♯')}
           </div>
         );

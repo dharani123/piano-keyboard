@@ -3,7 +3,7 @@ import { INSTRUMENTS } from '../audio/instruments.js';
 export default function VoicePanel({ voiceIndex, onSelect }) {
   return (
     <div className="panel">
-      <div className="panel-title">Voice <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd></div>
+      <div className="panel-title">Voice <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>7</kbd></div>
       <div className="voices">
         {INSTRUMENTS.map((inst, i) => (
           <button
