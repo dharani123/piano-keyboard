@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { engine } from '../../audio/engine.js';
+import { loadTanpura, saveTanpura, startTanpura } from '../../songs/tanpura.js';
 import { keyAt } from '../../data/keymap.js';
 import { SONG_LIBRARY } from '../../songs/library.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
@@ -41,9 +42,10 @@ function saveBest(best) {
 
 export default function SongsMode({ piano, kind }) {
   const [songId, setSongId] = useState(null);
-  const [mode, setMode] = useState('wait');
+  const [modeChoice, setMode] = useState('wait');
   const [speed, setSpeed] = useState(1);
   const [metronome, setMetronome] = useState(true);
+  const [drone, setDrone] = useState(loadTanpura); // tanpura under Carnatic exercises
   const [best, setBest] = useState(loadBest);
   const [mySongs, setMySongs] = useState(loadMySongs);
   const [raga, setRaga] = useState(() => {
@@ -61,6 +63,8 @@ export default function SongsMode({ piano, kind }) {
   const allSongs = kind === 'carnatic' ? carnatic : [...SONG_LIBRARY, ...mySongs];
   const song = allSongs.find(s => s.id === songId) ?? allSongs[0];
   const speeds = song.carnatic ? CARNATIC_SPEEDS : SPEEDS;
+  // Carnatic exercises are always played along at tempo
+  const mode = kind === 'carnatic' ? 'play' : modeChoice;
   // Mel/Mandra Sthayi slide the keys two places while they're picked
   const layout = song.layout ?? 0;
   useEffect(() => { piano.setLayout(layout); }, [layout]);
@@ -111,6 +115,7 @@ export default function SongsMode({ piano, kind }) {
   function stop() {
     cancelAnimationFrame(frame.current);
     engine.cancelScheduled();
+    engine.droneStop();
     light([]);
     run.current = null;
     pianoRef.current.setStatus(null);
@@ -140,6 +145,7 @@ export default function SongsMode({ piano, kind }) {
     const leadBeats = Math.max(COUNT_IN, FALL_HEIGHT / PX_PER_SECOND / spb);
     play.beat = -leadBeats;
     const now = engine.now();
+    if (song.carnatic && drone) startTanpura(base, song.sa, piano.transpose);
     if (mode === 'play' && metronome) {
       const t0 = now + leadBeats * spb;
       for (let b = -COUNT_IN; b < Math.ceil(song.totalBeats); b++) engine.click(t0 + b * spb, b % 4 === 0);
@@ -182,6 +188,16 @@ export default function SongsMode({ piano, kind }) {
     stop();
     setResult({ ...s, stars });
     setPhase('result');
+  }
+
+  // The tanpura can be switched on or off at any time, even mid-exercise
+  function toggleDrone(on) {
+    setDrone(on);
+    saveTanpura(on);
+    const r = run.current;
+    if (!r) return;
+    if (on) startTanpura(r.base, r.song.sa, piano.transpose);
+    else engine.droneStop();
   }
 
   function quit() {
@@ -324,14 +340,16 @@ export default function SongsMode({ piano, kind }) {
           </p>
         )}
 
-        <div className="song-option">
-          <span className="option-label">Mode</span>
-          {Object.entries(MODES).map(([id, m]) => (
-            <button key={id} className={mode === id ? 'active' : ''} disabled={phase === 'playing'} onClick={() => setMode(id)}>
-              {m.label}
-            </button>
-          ))}
-        </div>
+        {kind !== 'carnatic' && (
+          <div className="song-option">
+            <span className="option-label">Mode</span>
+            {Object.entries(MODES).map(([id, m]) => (
+              <button key={id} className={mode === id ? 'active' : ''} disabled={phase === 'playing'} onClick={() => setMode(id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
         <p className="song-note">{MODES[mode].hint}.</p>
 
         <div className="song-option">
@@ -343,6 +361,12 @@ export default function SongsMode({ piano, kind }) {
           ))}
         </div>
 
+        {song.carnatic && (
+          <label className="unlock">
+            <input type="checkbox" checked={drone} onChange={e => toggleDrone(e.target.checked)} />
+            Tanpura drone (Sa–Pa)
+          </label>
+        )}
         {mode === 'play' && (
           <label className="unlock">
             <input type="checkbox" checked={metronome} disabled={phase === 'playing'} onChange={e => setMetronome(e.target.checked)} />

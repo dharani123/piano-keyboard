@@ -3,22 +3,19 @@ import { createPortal } from 'react-dom';
 import { engine } from '../../audio/engine.js';
 import { frequency } from '../../audio/pitch.js';
 import { RAGAS, DEFAULT_RAGA, CARNATIC_BPM, carnaticSongs } from '../../songs/carnatic.js';
+import { loadTanpura, saveTanpura, startTanpura } from '../../songs/tanpura.js';
 import { journeyLines, playAlongPlan, segmentAt, loadRelaxPos, saveRelaxPos } from '../../songs/relax.js';
-import { createPlay, press, advance, pendingGroup, pitchKey } from '../../songs/player.js';
+import { createPlay, press, advance, pitchKey } from '../../songs/player.js';
 import RagaSelect from './RagaSelect.jsx';
 import FallingNotes, { FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 
 const SPEEDS = [0.5, 0.75, 1];
 const RAGA_KEY = 'desk-piano-raga';
-const PAUSE_BETWEEN = 0.7; // seconds of quiet between lines
-const BREATHER = 2; // seconds between exercises in play-along
-const FLOWS = {
-  wait: { label: 'Wait for me', hint: 'Each line waits for you to press every swara' },
-  play: { label: 'Play along', hint: 'The varisai keeps flowing at a steady tempo; missed swaras just drift past' },
-};
+const BREATHER = 2; // seconds between exercises
 
-// No scores, no locks, no red keys: every varisai in order, each line heard
-// first (optional) and then played at your own pace, over a tanpura drone.
+// No scores, no locks, no red keys: every varisai in order, flowing at a
+// steady tempo over a tanpura drone, each line heard first (optional) and
+// echoed straight back.
 export default function RelaxMode({ piano }) {
   const [raga, setRaga] = useState(() => {
     try { return RAGAS[localStorage.getItem(RAGA_KEY)] ? localStorage.getItem(RAGA_KEY) : DEFAULT_RAGA; } catch { return DEFAULT_RAGA; }
@@ -27,9 +24,10 @@ export default function RelaxMode({ piano }) {
   const exercises = useMemo(() => lines.filter(l => l.line === 0), [lines]);
   const [pos, setPos] = useState(() => Math.min(loadRelaxPos(), lines.length - 1));
   const [speed, setSpeed] = useState(0.75);
-  const [drone, setDrone] = useState(true);
+  const [drone, setDrone] = useState(loadTanpura);
+  const droneOn = useRef(drone); // read by tuneDrone mid-run
+  const [guide, setGuide] = useState(true); // the app plays the swaras with you
   const [listenFirst, setListenFirst] = useState(true);
-  const [flow, setFlow] = useState('wait');
   const [step, setStep] = useState('idle'); // idle | listen | play | rest
   const [sounding, setSounding] = useState(-1); // event index heard right now
   const [, setFrame] = useState(0);
@@ -91,12 +89,23 @@ export default function RelaxMode({ piano }) {
     playLine(pos, base);
   }
 
-  // Tanpura on the exercise's Sa: Pa, Sa, Sa, low Sa
   function tuneDrone(base, sa) {
-    if (!drone || droneSa.current === sa) return;
-    const f = semi => frequency(base, sa + semi, pianoRef.current.transpose);
-    engine.droneStart([f(-5), f(0), f(0), f(-12)]);
+    if (!droneOn.current || droneSa.current === sa) return;
+    startTanpura(base, sa, pianoRef.current.transpose);
     droneSa.current = sa;
+  }
+
+  // The tanpura can be switched on or off at any time, even mid-exercise
+  function toggleDrone(on) {
+    setDrone(on);
+    saveTanpura(on);
+    droneOn.current = on;
+    if (!on) {
+      engine.droneStop();
+      droneSa.current = null;
+    } else if (step !== 'idle') {
+      tuneDrone(run.current?.base ?? piano.octave, line.sa);
+    }
   }
 
   function playLine(p, base) {
@@ -104,63 +113,7 @@ export default function RelaxMode({ piano }) {
     const l = lines[p];
     tuneDrone(base, l.sa);
     const spb = 60 / (CARNATIC_BPM * speed);
-    if (flow === 'play') playAlong(p, base, spb);
-    else if (listenFirst) listen(p, l, base, spb);
-    else yourTurn(p, l, base, spb);
-  }
-
-  // The app plays the line first, lighting each key as it sounds
-  function listen(p, l, base, spb) {
-    setStep('listen');
-    const t0 = engine.now() + 0.25;
-    for (const e of l.events) {
-      for (const n of e.notes) {
-        engine.playNote(frequency(base + n.oct, n.semitone, pianoRef.current.transpose), pianoRef.current.instrumentId, t0 + e.beat * spb, e.beats * spb * 0.92);
-      }
-    }
-    run.current = { pos: p, base, spb };
-    const tick = () => {
-      if (!run.current) return;
-      const b = (engine.now() - t0) / spb;
-      const i = l.events.findIndex(e => b >= e.beat && b < e.beat + e.beats);
-      setSounding(i);
-      light(i >= 0 ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct, l.layout)) : []);
-      if (b > l.totalBeats + 0.3) {
-        setSounding(-1);
-        light([]);
-        return yourTurn(p, l, base, spb);
-      }
-      frame.current = requestAnimationFrame(tick);
-    };
-    frame.current = requestAnimationFrame(tick);
-  }
-
-  // Falling notes that wait for you; when the line is done, on to the next
-  function yourTurn(p, l, base, spb) {
-    setStep('play');
-    const play = createPlay(l, { mode: 'wait', baseOctave: base, secondsPerBeat: spb });
-    play.beat = -FALL_HEIGHT / PX_PER_SECOND / spb * 0.6;
-    run.current = { pos: p, play, base, spb, last: performance.now() };
-    const tick = () => {
-      const r = run.current;
-      if (!r?.play) return;
-      const t = performance.now();
-      const held = new Set(pianoRef.current.getHeld().map(h => pitchKey(h.semitone, h.octave)));
-      advance(r.play, Math.min((t - r.last) / 1000, 0.25) / r.spb, held);
-      r.last = t;
-      const next = pendingGroup(r.play).filter(n => n.beat - r.play.beat <= 1);
-      light(next.map(n => codeFor(n.semitone, n.octave - r.base, l.layout)));
-      setFrame(f => f + 1);
-      if (r.play.done) {
-        light([]);
-        setStep('rest');
-        const np = goTo(p + 1);
-        timer.current = setTimeout(() => playLine(np, base), PAUSE_BETWEEN * 1000);
-        return;
-      }
-      frame.current = requestAnimationFrame(tick);
-    };
-    frame.current = requestAnimationFrame(tick);
+    playAlong(p, base, spb);
   }
 
   // Play-along: the rest of the exercise flows at tempo (call and response
@@ -169,12 +122,14 @@ export default function RelaxMode({ piano }) {
     const plan = playAlongPlan(lines, p, listenFirst);
     const lead = listenFirst ? 1 : Math.max(2, FALL_HEIGHT / PX_PER_SECOND / spb);
     const tStart = engine.now() + lead * spb;
-    for (const seg of plan.segments) {
-      if (seg.listenAt === null) continue;
+    // The app's lines while you listen, and the swaras with you while you play (if guiding)
+    const starts = plan.segments.flatMap(seg => [seg.listenAt, guide ? seg.playAt : null]
+      .filter(at => at !== null).map(at => [seg, at]));
+    for (const [seg, at] of starts) {
       for (const e of lines[seg.pos].events) {
         for (const n of e.notes) {
           engine.playNote(frequency(base + n.oct, n.semitone, pianoRef.current.transpose), pianoRef.current.instrumentId,
-            tStart + (seg.listenAt + e.beat) * spb, e.beats * spb * 0.92);
+            tStart + (at + e.beat) * spb, e.beats * spb * 0.92);
         }
       }
     }
@@ -228,7 +183,7 @@ export default function RelaxMode({ piano }) {
 
   const r = run.current;
   const active = step !== 'idle';
-  const fall = (step === 'play' || (flow === 'play' && step === 'listen')) && r?.play && (
+  const fall = (step === 'play' || step === 'listen') && r?.play && (
     <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle />
   );
 
@@ -254,7 +209,7 @@ export default function RelaxMode({ piano }) {
       </div>
       <div className="relax-step">
         {step === 'listen' && '👂 Listen…'}
-        {step === 'play' && (flow === 'play' ? '🎹 Your turn: flow with it' : '🎹 Your turn: take your time')}
+        {step === 'play' && '🎹 Your turn: flow with it'}
         {step === 'rest' && (pos > 0 && lines[pos].line === 0 ? `✨ Breathe… next: ${lines[pos].title}` : '…')}
       </div>
       {lineView}
@@ -283,13 +238,7 @@ export default function RelaxMode({ piano }) {
         <span className="option-label">Raga</span>
         <RagaSelect raga={raga} disabled={active} onPick={pickRaga} />
       </div>
-      <div className="song-option">
-        <span className="option-label">Mode</span>
-        {Object.entries(FLOWS).map(([id, f]) => (
-          <button key={id} className={flow === id ? 'active' : ''} disabled={active} onClick={() => setFlow(id)}>{f.label}</button>
-        ))}
-      </div>
-      <p className="song-note">{FLOWS[flow].hint}{flow === 'play' && listenFirst ? ': the app plays a line, you echo it straight back, in rhythm' : ''}.</p>
+      <p className="song-note">The varisai keeps flowing at a steady tempo; missed swaras just drift past{listenFirst ? ': the app plays a line, you echo it straight back, in rhythm' : ''}.</p>
       <div className="song-option">
         <span className="option-label">Speed</span>
         {SPEEDS.map(v => (
@@ -299,8 +248,12 @@ export default function RelaxMode({ piano }) {
         ))}
       </div>
       <label className="unlock">
-        <input type="checkbox" checked={drone} disabled={active} onChange={e => setDrone(e.target.checked)} />
+        <input type="checkbox" checked={drone} onChange={e => toggleDrone(e.target.checked)} />
         Tanpura drone (Sa–Pa)
+      </label>
+      <label className="unlock">
+        <input type="checkbox" checked={guide} disabled={active} onChange={e => setGuide(e.target.checked)} />
+        Play the swaras with me
       </label>
       <label className="unlock">
         <input type="checkbox" checked={listenFirst} disabled={active} onChange={e => setListenFirst(e.target.checked)} />
