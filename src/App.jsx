@@ -13,6 +13,8 @@ import { effectiveTranspose } from './ear/transposeLock.js';
 import { COLOUR_MODES, loadColourMode, saveColourMode } from './data/colours.js';
 import { SIZE_MODES, loadSizeMode, saveSizeMode } from './data/pianoSize.js';
 
+// Shown on the display instead of the usual message while the browser holds the sound back
+const AUDIO_MESSAGES = { suspended: 'SOUND PAUSED - CLICK ANYWHERE', stuck: 'SOUND STUCK - RESTARTING' };
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export default function App() {
@@ -31,6 +33,7 @@ export default function App() {
   const [lessonSlot, setLessonSlot] = useState(null); // element under the piano where exercises render
   const [fallSlot, setFallSlot] = useState(null); // element above the piano where song notes fall
   const [layout, setLayout] = useState(0); // keyboard layout shift: 0, +2 (low notes) or -2 (high), see keymap.js
+  const [audioStatus, setAudioStatus] = useState(() => engine.status());
   const [colourMode, setColourMode] = useState(loadColourMode);
   const [sizeMode, setSizeMode] = useState(loadSizeMode);
   const [hideOutlines, setHideOutlines] = useState(() => {
@@ -51,6 +54,7 @@ export default function App() {
   useEffect(() => { engine.setSustain(sustainOn); }, [sustainOn]);
   // A key held across a layout change would never get its key-up note
   useEffect(() => releaseAll(), [layout]);
+  useEffect(() => engine.onStatus(setAudioStatus), []);
   useEffect(() => saveColourMode(colourMode), [colourMode]);
   useEffect(() => {
     saveSizeMode(sizeMode);
@@ -140,7 +144,7 @@ export default function App() {
             octave={octave}
             transpose={transpose}
             sustain={sustainOn}
-            message={lessonStatus ?? 'READY'}
+            message={AUDIO_MESSAGES[audioStatus] ?? lessonStatus ?? 'READY'}
           />
         </header>
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { journeyLines, playAlongPlan, segmentAt } from './relax.js';
+import { journeyLines, playAlongPlan, segmentAt, appNotes } from './relax.js';
 import { carnaticSongs } from './carnatic.js';
 
 describe('journeyLines', () => {
@@ -10,6 +10,7 @@ describe('journeyLines', () => {
     expect(lines[0].events.map(e => e.notes[0].name).join(' ')).toBe('Sa Ri Ga Ma Pa Da Ni S\u0307a');
     expect(lines[1].events.map(e => e.notes[0].name).join(' ')).toBe('S\u0307a Ni Da Pa Ma Ga Ri Sa');
     expect(lines.at(-1).title).toBe('Alankaram 7 · Eka');
+    expect(lines[0].id).toBe('sarali-1@mayamalavagowla');
   });
 
   it('cuts every exercise into talam-cycle lines starting at beat 0', () => {
@@ -50,5 +51,31 @@ describe('playAlongPlan', () => {
     expect(segmentAt(segments, 3)).toMatchObject({ seg: { pos: s2 }, listening: true });
     expect(segmentAt(segments, 9)).toMatchObject({ seg: { pos: s2 }, listening: false });
     expect(segmentAt(segments, 17)).toMatchObject({ seg: { pos: s2 + 1 }, listening: true });
+  });
+});
+
+describe('appNotes', () => {
+  const lines = journeyLines(carnaticSongs('shankarabharanam'));
+  const s2 = lines.findIndex(l => l.title === 'Sarali Varisai 2');
+
+  it('lists the notes the app plays, in time order, for the listening parts', () => {
+    const plan = playAlongPlan(lines, s2, true);
+    const notes = appNotes(lines, plan, false);
+    expect(notes).toHaveLength(4 * 8);
+    expect(notes[0]).toMatchObject({ beat: 0, beats: 1, semitone: 0, oct: 0 });
+    expect(notes.every((n, i) => i === 0 || n.beat >= notes[i - 1].beat)).toBe(true);
+    // first line is heard on beats 0-7, then the second line from beat 16
+    expect(notes[8].beat).toBe(16);
+  });
+
+  it('adds the swaras with you while you play when guiding', () => {
+    const plan = playAlongPlan(lines, s2, true);
+    const notes = appNotes(lines, plan, true);
+    expect(notes).toHaveLength(4 * 8 * 2);
+    expect(notes[8].beat).toBe(8);
+  });
+
+  it('plays nothing without listening or guiding', () => {
+    expect(appNotes(lines, playAlongPlan(lines, s2, false), false)).toEqual([]);
   });
 });

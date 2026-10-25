@@ -13,7 +13,7 @@ export function journeyLines(songs) {
       const events = song.events
         .filter(e => e.beat >= from && e.beat < from + beats)
         .map(e => ({ ...e, beat: e.beat - from }));
-      return { exercise, line, lines: count, title: song.title, events, totalBeats: beats, talam: song.talam, sa: song.sa ?? 0, layout: song.layout ?? 0 };
+      return { exercise, line, lines: count, id: song.id, title: song.title, events, totalBeats: beats, talam: song.talam, sa: song.sa ?? 0, layout: song.layout ?? 0 };
     });
   });
 }
@@ -36,6 +36,23 @@ export function playAlongPlan(lines, pos, listenFirst) {
     beat = playAt + len;
   }
   return { segments, song: { events, totalBeats: beat } };
+}
+
+// Every note the app itself plays in a play-along plan, in time order: each
+// line during its listening part, and again with you while you play if guiding.
+// The player schedules these a moment ahead, never all at once (hundreds of
+// audio nodes waiting at once overload the browser's audio and silence it).
+export function appNotes(lines, plan, guide) {
+  const notes = [];
+  for (const seg of plan.segments) {
+    for (const at of [seg.listenAt, guide ? seg.playAt : null]) {
+      if (at === null) continue;
+      for (const e of lines[seg.pos].events) {
+        for (const n of e.notes) notes.push({ beat: at + e.beat, beats: e.beats, semitone: n.semitone, oct: n.oct, name: n.name });
+      }
+    }
+  }
+  return notes.sort((a, b) => a.beat - b.beat);
 }
 
 // Which segment a beat falls in, and whether it is the listening or playing part

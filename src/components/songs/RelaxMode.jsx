@@ -4,14 +4,17 @@ import { engine } from '../../audio/engine.js';
 import { frequency } from '../../audio/pitch.js';
 import { RAGAS, DEFAULT_RAGA, CARNATIC_BPM, carnaticSongs } from '../../songs/carnatic.js';
 import { loadTanpura, saveTanpura, startTanpura } from '../../songs/tanpura.js';
-import { journeyLines, playAlongPlan, segmentAt, loadRelaxPos, saveRelaxPos } from '../../songs/relax.js';
+import { journeyLines, playAlongPlan, appNotes, segmentAt, loadRelaxPos, saveRelaxPos } from '../../songs/relax.js';
 import { createPlay, press, advance, pitchKey } from '../../songs/player.js';
+import { markRelaxFinished } from '../../songs/best.js';
 import RagaSelect from './RagaSelect.jsx';
 import FallingNotes, { FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 
 const SPEEDS = [0.5, 0.75, 1];
 const RAGA_KEY = 'desk-piano-raga';
 const BREATHER = 2; // seconds between exercises
+const LOOKAHEAD = 1.5; // seconds of the app's notes created ahead of time
+const FEED_EVERY = 200; // ms between topping up (hidden tabs slow this to ~1 s, still inside the lookahead)
 
 // No scores, no locks, no red keys: every varisai in order, flowing at a
 // steady tempo over a tanpura drone, each line heard first (optional) and
@@ -34,6 +37,7 @@ export default function RelaxMode({ piano }) {
   const run = useRef(null); // { pos, play, base, spb, last }
   const frame = useRef(0);
   const timer = useRef(0);
+  const feeder = useRef(0); // interval that schedules the app's notes just ahead
   const lit = useRef('');
   const droneSa = useRef(null); // the Sa the drone is sounding, null when off
   const pianoRef = useRef(piano);
@@ -61,6 +65,7 @@ export default function RelaxMode({ piano }) {
   function halt() {
     cancelAnimationFrame(frame.current);
     clearTimeout(timer.current);
+    clearInterval(feeder.current);
     engine.cancelScheduled();
     light([]);
     setSounding(-1);
@@ -75,6 +80,11 @@ export default function RelaxMode({ piano }) {
     pianoRef.current.setStatus(null);
   }
   useEffect(() => stop, []);
+
+  // Relax runs on the audio clock: if the engine had to restart it, replay the line
+  const restartLine = useRef(null);
+  restartLine.current = () => { if (run.current) playLine(run.current.pos, run.current.base); };
+  useEffect(() => engine.onRestart(() => restartLine.current()), []);
 
   // Wrong keys just sound, like a real instrument: press() ignores them here
   useEffect(() => piano.subscribe(e => {
@@ -120,22 +130,27 @@ export default function RelaxMode({ piano }) {
   // when listening first), timed on the audio clock so it stays steady
   function playAlong(p, base, spb) {
     const plan = playAlongPlan(lines, p, listenFirst);
-    const lead = listenFirst ? 1 : Math.max(2, FALL_HEIGHT / PX_PER_SECOND / spb);
+    const lead = Math.max(2, FALL_HEIGHT / PX_PER_SECOND / spb); // time for the first tiles to fall from the top
     const tStart = engine.now() + lead * spb;
-    // The app's lines while you listen, and the swaras with you while you play (if guiding)
-    const starts = plan.segments.flatMap(seg => [seg.listenAt, guide ? seg.playAt : null]
-      .filter(at => at !== null).map(at => [seg, at]));
-    for (const [seg, at] of starts) {
-      for (const e of lines[seg.pos].events) {
-        for (const n of e.notes) {
-          engine.playNote(frequency(base + n.oct, n.semitone, pianoRef.current.transpose), pianoRef.current.instrumentId,
-            tStart + (at + e.beat) * spb, e.beats * spb * 0.92);
-        }
+    // The app's lines while you listen, and the swaras with you while you play (if guiding),
+    // each created just before it sounds
+    const queue = appNotes(lines, plan, guide);
+    let next = 0;
+    const feed = () => {
+      const until = engine.now() + LOOKAHEAD;
+      while (next < queue.length && tStart + queue[next].beat * spb < until) {
+        const n = queue[next++];
+        engine.playNote(frequency(base + n.oct, n.semitone, pianoRef.current.transpose), pianoRef.current.instrumentId,
+          tStart + n.beat * spb, n.beats * spb * 0.92);
       }
-    }
+    };
+    feed();
+    feeder.current = setInterval(feed, FEED_EVERY);
     const play = createPlay(plan.song, { mode: 'play', baseOctave: base, secondsPerBeat: spb });
     play.beat = -lead;
-    run.current = { pos: p, play, base, spb, offset: plan.segments[0].playAt };
+    // the lines you hear fall too, so you can watch them coming
+    const listenNotes = listenFirst ? appNotes(lines, plan, false).map(n => ({ ...n, octave: base + n.oct })) : [];
+    run.current = { pos: p, play, base, spb, offset: plan.segments[0].playAt, listenNotes };
     setStep(listenFirst ? 'listen' : 'play');
 
     const tick = () => {
@@ -162,6 +177,8 @@ export default function RelaxMode({ piano }) {
       if (r.play.done) {
         light([]);
         setStep('rest');
+        // played to the end of the exercise: it counts as passed in Carnatic Music too
+        markRelaxFinished(lines[plan.segments.at(-1).pos].id);
         const np = goTo(plan.segments.at(-1).pos + 1);
         timer.current = setTimeout(() => playLine(np, base), BREATHER * 1000);
         return;
@@ -184,7 +201,7 @@ export default function RelaxMode({ piano }) {
   const r = run.current;
   const active = step !== 'idle';
   const fall = (step === 'play' || step === 'listen') && r?.play && (
-    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle />
+    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle listen={r.listenNotes} />
   );
 
   // The current line as swaras, the sounding one lit while listening

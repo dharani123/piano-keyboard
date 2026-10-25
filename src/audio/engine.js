@@ -15,6 +15,8 @@ const voices = new VoiceManager(startVoice, stopVoice);
 function ensure() {
   if (ctx) return;
   ctx = new (window.AudioContext || window.webkitAudioContext)();
+  ctx.addEventListener('statechange', checkAudio);
+  startWatch();
 
   const compressor = ctx.createDynamicsCompressor();
   compressor.connect(ctx.destination);
@@ -248,7 +250,87 @@ function pluck(freq, when) {
 
 function wake() {
   ensure();
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => { /* needs a click first */ });
+}
+
+// Chrome can pause the audio (no click yet, the sound device going to sleep,
+// power saving) or leave it "running" with a clock that has stopped moving,
+// which silences everything scheduled ahead (Relax runs on that clock). A
+// watchdog spots both: it resumes, kicks a stuck device with a suspend and
+// resume, and if the clock still won't move, builds a fresh audio context.
+// The app shows the status on the display.
+let status = 'off'; // off | running | suspended | stuck
+const statusListeners = new Set();
+const restartListeners = new Set(); // told when a fresh context replaced a stuck one
+let watchTimer = null;
+let lastClock = 0;
+let lastWall = 0;
+let stuckSince = null;
+let lastKick = 0;
+let kicking = false; // our own suspend/resume is in flight
+let droneArgs = null; // the running drone, restarted after a rebuild
+
+function setStatus(next) {
+  if (status === next) return;
+  status = next;
+  console.warn(`[Desk Piano audio] ${next}`, ctx && { state: ctx.state, clock: ctx.currentTime.toFixed(2) });
+  for (const fn of statusListeners) fn(next);
+}
+
+function checkAudio() {
+  if (!ctx || kicking) return;
+  const wall = performance.now();
+  const clock = ctx.currentTime;
+  const wallGap = (wall - lastWall) / 1000;
+  if (ctx.state !== 'running') {
+    stuckSince = null;
+    setStatus('suspended');
+    wake();
+  } else if (wallGap > 0.3 && clock - lastClock < wallGap * 0.2) {
+    stuckSince ??= wall;
+    setStatus('stuck');
+    if (wall - stuckSince > 3000) rebuild();
+    else if (wall - lastKick > 1000) {
+      lastKick = wall;
+      kicking = true;
+      ctx.suspend().then(() => ctx.resume()).catch(() => { /* try again next tick */ }).finally(() => { kicking = false; });
+    }
+  } else if (wallGap > 0.3) {
+    stuckSince = null;
+    setStatus('running');
+  }
+  if (wallGap > 0.3) {
+    lastClock = clock;
+    lastWall = wall;
+  }
+}
+
+function startWatch() {
+  lastClock = ctx.currentTime;
+  lastWall = performance.now();
+  if (watchTimer) return;
+  watchTimer = setInterval(checkAudio, 500);
+  // A click or key press is what Chrome needs before it lets paused audio resume
+  for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, wake, { capture: true });
+}
+
+// Throw the stuck context away and start a new one (scheduled notes are lost;
+// the drone carries on)
+function rebuild() {
+  const old = ctx;
+  voices.allOff();
+  for (const s of scheduled) s.cancel();
+  scheduled = [];
+  clearInterval(droneTimer);
+  droneTimer = null;
+  droneGain = null;
+  pluckCache.clear(); // buffers belong to the old sample rate
+  ctx = null;
+  stuckSince = null;
+  old.close().catch(() => { /* already gone */ });
+  ensure();
+  if (droneArgs) engine.droneStart(...droneArgs);
+  for (const fn of restartListeners) fn();
 }
 
 export const engine = {
@@ -291,6 +373,7 @@ export const engine = {
   droneStart(freqs, volume = 0.5) {
     wake();
     this.droneStop();
+    droneArgs = [freqs, volume];
     droneGain = ctx.createGain();
     droneGain.gain.value = 0.05 * volume;
     droneGain.connect(bus);
@@ -306,6 +389,7 @@ export const engine = {
     droneTimer = setInterval(schedule, 500);
   },
   droneStop() {
+    droneArgs = null;
     clearInterval(droneTimer);
     droneTimer = null;
     if (droneGain) {
@@ -314,6 +398,19 @@ export const engine = {
       setTimeout(() => g.disconnect(), 2000);
       droneGain = null;
     }
+  },
+  // Audio status for the display: 'off' | 'running' | 'suspended' | 'stuck'
+  status() {
+    return status;
+  },
+  onStatus(fn) {
+    statusListeners.add(fn);
+    return () => statusListeners.delete(fn);
+  },
+  // The audio clock starts again from zero after a restart, so anything timed on it must start over
+  onRestart(fn) {
+    restartListeners.add(fn);
+    return () => restartListeners.delete(fn);
   },
   set(name, value) {
     settings[name] = value;

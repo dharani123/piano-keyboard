@@ -1,5 +1,5 @@
 {
-  "desk-piano-tanpura": 1,
+  "desk-piano-tanpura": 0,
   "desk-piano-hide-outlines": 1,
   "desk-piano-songs": {
     "hot-cross-buns:wait": 3,
@@ -27,11 +27,13 @@
     "janta-3@shankarabharanam:play": 3,
     "sarali-1@mayamalavagowla:play": 3,
     "sarali-2@mayamalavagowla:play": 3,
-    "sarali-3@mayamalavagowla:play": 3
+    "sarali-3@mayamalavagowla:play": 3,
+    "janta-4@shankarabharanam:play": 3,
+    "janta-5@shankarabharanam:play": 3
   },
-  "desk-piano-colours": "bw",
+  "desk-piano-colours": "colour",
   "desk-piano-relax": {
-    "pos": 74
+    "pos": 129
   },
   "desk-piano-size": "big",
   "desk-piano-ear": {

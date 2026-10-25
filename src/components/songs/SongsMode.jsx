@@ -6,7 +6,7 @@ import { keyAt } from '../../data/keymap.js';
 import { SONG_LIBRARY } from '../../songs/library.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
 import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, SWARA_NAMES, carnaticSongs } from '../../songs/carnatic.js';
-import { PASS_STARS } from '../../lessons/progress.js';
+import { loadBest, saveBest, isPassed } from '../../songs/best.js';
 import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
 import RagaSelect from './RagaSelect.jsx';
@@ -30,14 +30,6 @@ const MODES = {
 };
 const MESSAGES = ['Keep practising, it gets easier!', 'Nice start!', 'Great playing!', 'Perfect! 🎉'];
 
-// Best stars per song and mode live in this browser only: { "songId:mode": 0-3 }
-const BEST_KEY = 'desk-piano-songs';
-function loadBest() {
-  try { return JSON.parse(localStorage.getItem(BEST_KEY)) ?? {}; } catch { return {}; }
-}
-function saveBest(best) {
-  try { localStorage.setItem(BEST_KEY, JSON.stringify(best)); } catch { /* storage unavailable */ }
-}
 
 
 export default function SongsMode({ piano, kind }) {
@@ -70,8 +62,8 @@ export default function SongsMode({ piano, kind }) {
   useEffect(() => { piano.setLayout(layout); }, [layout]);
   useEffect(() => () => pianoRef.current.setLayout(0), []);
 
-  // Carnatic exercises open in order, like a teacher: pass one (★★ in either mode) to open the next
-  const passed = id => Math.max(best[`${id}:wait`] ?? 0, best[`${id}:play`] ?? 0) >= PASS_STARS;
+  // Carnatic exercises open in order, like a teacher: pass one (★★, or finish it in Relax) to open the next
+  const passed = id => isPassed(best, id);
   // (an exercise already passed stays open, e.g. after new ones were slotted in before it)
   const isLocked = s => {
     const i = carnatic.findIndex(c => c.id === s.id);

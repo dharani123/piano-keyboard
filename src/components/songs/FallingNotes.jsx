@@ -13,7 +13,8 @@ export const codeFor = (semitone, rel, shift = 0) => keyAt(semitone, rel, shift)
 // Notes falling above the piano, each in the column of its key.
 // play = a player.js state; base = the octave the song started in.
 // gentle: missed notes just fade instead of turning red (Relax mode).
-export default function FallingNotes({ slot, play, base, spb, shift = 0, gentle = false }) {
+// listen: notes the app plays for you to hear (same shape as play.notes), drawn lighter
+export default function FallingNotes({ slot, play, base, spb, shift = 0, gentle = false, listen = [] }) {
   const [lanes, setLanes] = useState({});
 
   // Lane positions: line each column up with its key on the piano below
@@ -37,14 +38,14 @@ export default function FallingNotes({ slot, play, base, spb, shift = 0, gentle 
   const pxPerBeat = PX_PER_SECOND * spb;
   return createPortal(
     <div className="fall" style={{ height: FALL_HEIGHT }}>
-      {play.notes.map((n, i) => {
+      {[...play.notes, ...listen.map(n => ({ ...n, listen: true }))].map((n, i) => {
         const lane = lanes[codeFor(n.semitone, n.octave - base, shift)];
         if (!lane) return null;
         const bottom = (n.beat - play.beat) * pxPerBeat;
         const height = Math.max(n.beats * pxPerBeat - 3, 8);
         if (bottom > FALL_HEIGHT || bottom + height < 0) return null;
         const black = BLACK_SEMITONES.includes(n.semitone);
-        const cls = ['fall-note', black && 'sharp', n.hit && 'hit', n.holding && 'holding', n.missed && (gentle ? 'gone' : 'missed')]
+        const cls = ['fall-note', black && 'sharp', n.listen && 'listen', n.hit && 'hit', n.holding && 'holding', n.missed && (gentle ? 'gone' : 'missed')]
           .filter(Boolean).join(' ');
         return (
           <div key={i} className={cls} style={{ ...noteColourVars(n.semitone), left: lane.left + 3, width: lane.width - 6, bottom, height }}>
