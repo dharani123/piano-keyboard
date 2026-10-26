@@ -26,10 +26,9 @@ export default function RelaxMode({ piano }) {
   const lines = useMemo(() => journeyLines(carnaticSongs(raga)), [raga]);
   const exercises = useMemo(() => lines.filter(l => l.line === 0), [lines]);
   const [pos, setPos] = useState(() => Math.min(loadRelaxPos(), lines.length - 1));
-  const [speed, setSpeed] = useState(0.75);
+  const [speed, setSpeed] = useState(1);
   const [drone, setDrone] = useState(loadTanpura);
   const droneOn = useRef(drone); // read by tuneDrone mid-run
-  const [guide, setGuide] = useState(true); // the app plays the swaras with you
   const [listenFirst, setListenFirst] = useState(true);
   const [step, setStep] = useState('idle'); // idle | listen | play | rest
   const [sounding, setSounding] = useState(-1); // event index heard right now
@@ -132,9 +131,8 @@ export default function RelaxMode({ piano }) {
     const plan = playAlongPlan(lines, p, listenFirst);
     const lead = Math.max(2, FALL_HEIGHT / PX_PER_SECOND / spb); // time for the first tiles to fall from the top
     const tStart = engine.now() + lead * spb;
-    // The app's lines while you listen, and the swaras with you while you play (if guiding),
-    // each created just before it sounds
-    const queue = appNotes(lines, plan, guide);
+    // The app's lines while you listen, each created just before it sounds
+    const queue = appNotes(lines, plan);
     let next = 0;
     const feed = () => {
       const until = engine.now() + LOOKAHEAD;
@@ -267,10 +265,6 @@ export default function RelaxMode({ piano }) {
       <label className="unlock">
         <input type="checkbox" checked={drone} onChange={e => toggleDrone(e.target.checked)} />
         Tanpura drone (Sa–Pa)
-      </label>
-      <label className="unlock">
-        <input type="checkbox" checked={guide} disabled={active} onChange={e => setGuide(e.target.checked)} />
-        Play the swaras with me
       </label>
       <label className="unlock">
         <input type="checkbox" checked={listenFirst} disabled={active} onChange={e => setListenFirst(e.target.checked)} />

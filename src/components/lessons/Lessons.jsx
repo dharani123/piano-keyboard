@@ -14,7 +14,7 @@ export default function Lessons({ piano }) {
     return next === -1 ? 0 : next;
   });
   const lesson = LESSONS[selected];
-  const [tab, setTab] = useState('lessons');
+  const [tab, setTab] = useState('relax');
   const gymOpen = progress.unlockAll || hasPassed(progress, 'ear-quick');
 
   function update(next) {
@@ -32,6 +32,8 @@ export default function Lessons({ piano }) {
   return (
     <div className="panel learn">
       <div className="learn-tabs">
+        <button className={tab === 'relax' ? 'active' : ''} onClick={() => setTab('relax')}>Carnatic Relax 🌿</button>
+        <button className={tab === 'carnatic' ? 'active' : ''} onClick={() => setTab('carnatic')}>Carnatic Music 🪕</button>
         <button className={tab === 'lessons' ? 'active' : ''} onClick={() => setTab('lessons')}>Lessons</button>
         <button
           className={tab === 'gym' ? 'active' : ''}
@@ -42,8 +44,6 @@ export default function Lessons({ piano }) {
           Ear Gym {gymOpen ? '🎧' : '🔒'}
         </button>
         <button className={tab === 'western' ? 'active' : ''} onClick={() => setTab('western')}>Western Music 🎵</button>
-        <button className={tab === 'carnatic' ? 'active' : ''} onClick={() => setTab('carnatic')}>Carnatic Music 🪕</button>
-        <button className={tab === 'relax' ? 'active' : ''} onClick={() => setTab('relax')}>Carnatic Relax 🌿</button>
         {!gymOpen && <span className="learn-tabs-note">Pass Ear training to open</span>}
       </div>
       {tab === 'relax' ? <RelaxMode piano={piano} /> : tab === 'western' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} /> : tab === 'gym' && gymOpen ? <EarGym piano={piano} /> : (

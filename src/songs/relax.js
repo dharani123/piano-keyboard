@@ -39,17 +39,16 @@ export function playAlongPlan(lines, pos, listenFirst) {
 }
 
 // Every note the app itself plays in a play-along plan, in time order: each
-// line during its listening part, and again with you while you play if guiding.
+// line during its listening part.
 // The player schedules these a moment ahead, never all at once (hundreds of
 // audio nodes waiting at once overload the browser's audio and silence it).
-export function appNotes(lines, plan, guide) {
+export function appNotes(lines, plan) {
   const notes = [];
   for (const seg of plan.segments) {
-    for (const at of [seg.listenAt, guide ? seg.playAt : null]) {
-      if (at === null) continue;
-      for (const e of lines[seg.pos].events) {
-        for (const n of e.notes) notes.push({ beat: at + e.beat, beats: e.beats, semitone: n.semitone, oct: n.oct, name: n.name });
-      }
+    const at = seg.listenAt;
+    if (at === null) continue;
+    for (const e of lines[seg.pos].events) {
+      for (const n of e.notes) notes.push({ beat: at + e.beat, beats: e.beats, semitone: n.semitone, oct: n.oct, name: n.name });
     }
   }
   return notes.sort((a, b) => a.beat - b.beat);
