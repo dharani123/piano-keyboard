@@ -7,12 +7,12 @@ import { loadTanpura, saveTanpura, startTanpura } from '../../songs/tanpura.js';
 import { journeyLines, playAlongPlan, appNotes, segmentAt, loadRelaxPos, saveRelaxPos } from '../../songs/relax.js';
 import { createPlay, press, advance, pitchKey } from '../../songs/player.js';
 import { markRelaxFinished } from '../../songs/best.js';
+import TanpuraControl from './TanpuraControl.jsx';
 import RagaSelect from './RagaSelect.jsx';
 import FallingNotes, { FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 
 const SPEEDS = [0.5, 0.75, 1];
 const RAGA_KEY = 'desk-piano-raga';
-const BREATHER = 2; // seconds between exercises
 const LOOKAHEAD = 1.5; // seconds of the app's notes created ahead of time
 const FEED_EVERY = 200; // ms between topping up (hidden tabs slow this to ~1 s, still inside the lookahead)
 
@@ -25,17 +25,21 @@ export default function RelaxMode({ piano }) {
   });
   const lines = useMemo(() => journeyLines(carnaticSongs(raga)), [raga]);
   const exercises = useMemo(() => lines.filter(l => l.line === 0), [lines]);
-  const [pos, setPos] = useState(() => Math.min(loadRelaxPos(), lines.length - 1));
+  // after a reload, start again from the first line of the varisai you were in
+  const [pos, setPos] = useState(() => {
+    const p = Math.min(loadRelaxPos(), lines.length - 1);
+    return p - lines[p].line;
+  });
   const [speed, setSpeed] = useState(0.75);
   const [drone, setDrone] = useState(loadTanpura);
   const droneOn = useRef(drone); // read by tuneDrone mid-run
   const [listenFirst, setListenFirst] = useState(true);
-  const [step, setStep] = useState('idle'); // idle | listen | play | rest
+  const [step, setStep] = useState('idle'); // idle | listen | play
+  const [finished, setFinished] = useState(null); // title of the varisai just completed: time for a break
   const [sounding, setSounding] = useState(-1); // event index heard right now
   const [, setFrame] = useState(0);
   const run = useRef(null); // { pos, play, base, spb, last }
   const frame = useRef(0);
-  const timer = useRef(0);
   const feeder = useRef(0); // interval that schedules the app's notes just ahead
   const lit = useRef('');
   const droneSa = useRef(null); // the Sa the drone is sounding, null when off
@@ -47,23 +51,24 @@ export default function RelaxMode({ piano }) {
   useEffect(() => { piano.setLayout(layout); }, [layout]);
   useEffect(() => () => pianoRef.current.setLayout(0), []);
 
-  function light(codes) {
-    const id = codes.join();
+  // demo: the app is playing these keys, so show them held down instead of as targets
+  function light(codes, demo = false) {
+    const id = codes.join() + (demo ? ':demo' : '');
     if (lit.current === id) return;
     lit.current = id;
-    pianoRef.current.setHighlight(codes.length ? { targets: codes, wrong: null } : null);
+    pianoRef.current.setHighlight(!codes.length ? null : demo ? { targets: [], demo: codes, wrong: null } : { targets: codes, wrong: null });
   }
 
   function goTo(next) {
     const p = (next + lines.length) % lines.length;
     setPos(p);
     saveRelaxPos(p);
+    setFinished(null);
     return p;
   }
 
   function halt() {
     cancelAnimationFrame(frame.current);
-    clearTimeout(timer.current);
     clearInterval(feeder.current);
     engine.cancelScheduled();
     light([]);
@@ -93,6 +98,7 @@ export default function RelaxMode({ piano }) {
 
   function start() {
     const base = piano.octave;
+    setFinished(null);
     piano.setStatus(RAGAS[raga].name.slice(0, 14).toUpperCase());
     requestAnimationFrame(() => piano.fallSlot?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
     playLine(pos, base);
@@ -147,7 +153,7 @@ export default function RelaxMode({ piano }) {
     const play = createPlay(plan.song, { mode: 'play', baseOctave: base, secondsPerBeat: spb });
     play.beat = -lead;
     // the lines you hear fall too, so you can watch them coming
-    const listenNotes = listenFirst ? appNotes(lines, plan, false).map(n => ({ ...n, octave: base + n.oct })) : [];
+    const listenNotes = listenFirst ? appNotes(lines, plan).map(n => ({ ...n, octave: base + n.oct })) : [];
     run.current = { pos: p, play, base, spb, offset: plan.segments[0].playAt, listenNotes };
     setStep(listenFirst ? 'listen' : 'play');
 
@@ -165,7 +171,9 @@ export default function RelaxMode({ piano }) {
         const l = lines[seg.pos];
         const i = l.events.findIndex(e => beat - seg.listenAt >= e.beat && beat - seg.listenAt < e.beat + e.beats);
         setSounding(i);
-        light(i >= 0 ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct, l.layout)) : []);
+        // the key is held while its note sounds, and let go just before the next one
+        const down = i >= 0 && beat - seg.listenAt < l.events[i].beat + l.events[i].beats * 0.92;
+        light(down ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct, l.layout)) : [], true);
       } else {
         setSounding(-1);
         const next = r.play.notes.filter(n => !n.hit && !n.missed && n.beat - r.play.beat <= 0.5);
@@ -173,12 +181,13 @@ export default function RelaxMode({ piano }) {
       }
       setFrame(f => f + 1);
       if (r.play.done) {
-        light([]);
-        setStep('rest');
         // played to the end of the exercise: it counts as passed in Carnatic Music too
-        markRelaxFinished(lines[plan.segments.at(-1).pos].id);
-        const np = goTo(plan.segments.at(-1).pos + 1);
-        timer.current = setTimeout(() => playLine(np, base), BREATHER * 1000);
+        const last = lines[plan.segments.at(-1).pos];
+        markRelaxFinished(last.id);
+        // stop for a break; Carry on starts the next varisai
+        goTo(plan.segments.at(-1).pos + 1);
+        stop();
+        setFinished(last.title);
         return;
       }
       frame.current = requestAnimationFrame(tick);
@@ -225,7 +234,6 @@ export default function RelaxMode({ piano }) {
       <div className="relax-step">
         {step === 'listen' && '👂 Listen…'}
         {step === 'play' && '🎹 Your turn: flow with it'}
-        {step === 'rest' && (pos > 0 && lines[pos].line === 0 ? `✨ Breathe… next: ${lines[pos].title}` : '…')}
       </div>
       {lineView}
       <div className="exercise-actions">
@@ -262,10 +270,7 @@ export default function RelaxMode({ piano }) {
           </button>
         ))}
       </div>
-      <label className="unlock">
-        <input type="checkbox" checked={drone} onChange={e => toggleDrone(e.target.checked)} />
-        Tanpura drone (Sa–Pa)
-      </label>
+      <TanpuraControl on={drone} onToggle={toggleDrone} />
       <label className="unlock">
         <input type="checkbox" checked={listenFirst} disabled={active} onChange={e => setListenFirst(e.target.checked)} />
         Listen to each line first, then play it back
@@ -282,6 +287,7 @@ export default function RelaxMode({ piano }) {
 
       {!active && (
         <>
+          {finished && <p className="relax-done">✨ {finished} done. Take a break, then carry on when you&apos;re ready.</p>}
           <div className="sheet-title">Up next</div>
           {lineView}
           <button className="primary big" onClick={start}>▶ {pos === 0 ? 'Begin' : 'Carry on'}</button>

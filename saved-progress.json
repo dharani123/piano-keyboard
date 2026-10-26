@@ -1,6 +1,6 @@
 {
   "desk-piano-tanpura": 0,
-  "desk-piano-hide-outlines": 0,
+  "desk-piano-hide-outlines": 1,
   "desk-piano-songs": {
     "hot-cross-buns:wait": 3,
     "mary:wait": 3,
@@ -34,11 +34,17 @@
     "janta-7@shankarabharanam:play": 3,
     "janta-7@shankarabharanam:relax": 2,
     "janta-8@shankarabharanam:relax": 2,
-    "janta-9@shankarabharanam:relax": 2
+    "janta-9@shankarabharanam:relax": 2,
+    "janta-10@shankarabharanam:relax": 2,
+    "janta-11@shankarabharanam:relax": 2,
+    "janta-12@shankarabharanam:relax": 2,
+    "dhatu-1@shankarabharanam:relax": 2,
+    "dhatu-2@shankarabharanam:relax": 2,
+    "dhatu-3@shankarabharanam:relax": 2
   },
   "desk-piano-colours": "gray",
   "desk-piano-relax": {
-    "pos": 213
+    "pos": 328
   },
   "desk-piano-size": "big",
   "desk-piano-ear": {
@@ -638,5 +644,6 @@
       "song-twinkle": 2
     }
   },
-  "desk-piano-raga": "shankarabharanam"
+  "desk-piano-raga": "shankarabharanam",
+  "desk-piano-tanpura-volume": 0.2
 }

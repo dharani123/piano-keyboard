@@ -60,7 +60,7 @@ describe('appNotes', () => {
 
   it('lists the notes the app plays, in time order, for the listening parts', () => {
     const plan = playAlongPlan(lines, s2, true);
-    const notes = appNotes(lines, plan, false);
+    const notes = appNotes(lines, plan);
     expect(notes).toHaveLength(4 * 8);
     expect(notes[0]).toMatchObject({ beat: 0, beats: 1, semitone: 0, oct: 0 });
     expect(notes.every((n, i) => i === 0 || n.beat >= notes[i - 1].beat)).toBe(true);
@@ -68,14 +68,7 @@ describe('appNotes', () => {
     expect(notes[8].beat).toBe(16);
   });
 
-  it('adds the swaras with you while you play when guiding', () => {
-    const plan = playAlongPlan(lines, s2, true);
-    const notes = appNotes(lines, plan, true);
-    expect(notes).toHaveLength(4 * 8 * 2);
-    expect(notes[8].beat).toBe(8);
-  });
-
-  it('plays nothing without listening or guiding', () => {
-    expect(appNotes(lines, playAlongPlan(lines, s2, false), false)).toEqual([]);
+  it('plays nothing without listening', () => {
+    expect(appNotes(lines, playAlongPlan(lines, s2, false))).toEqual([]);
   });
 });

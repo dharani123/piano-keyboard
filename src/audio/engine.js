@@ -388,6 +388,11 @@ export const engine = {
     schedule();
     droneTimer = setInterval(schedule, 500);
   },
+  // change the running drone's volume (0–1) smoothly
+  droneVolume(volume) {
+    if (droneArgs) droneArgs[1] = volume;
+    if (droneGain) droneGain.gain.setTargetAtTime(0.05 * volume, ctx.currentTime, 0.1);
+  },
   droneStop() {
     droneArgs = null;
     clearInterval(droneTimer);

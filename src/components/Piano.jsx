@@ -3,7 +3,7 @@ import { LAYOUTS } from '../data/keymap.js';
 import Key from './Key.jsx';
 
 // shift: which layout the keyboard is in (0 normal, +2 low, -2 high; see keymap.js)
-export default function Piano({ hideOutlines, shift = 0, pressed, targetCodes, wrongCode, onDown, onUp }) {
+export default function Piano({ hideOutlines, shift = 0, pressed, targetCodes, demoCodes = [], wrongCode, onDown, onUp }) {
   const whiteRefs = useRef([]);
   const blackRefs = useRef({});
   const all = LAYOUTS[shift];
@@ -28,7 +28,7 @@ export default function Piano({ hideOutlines, shift = 0, pressed, targetCodes, w
 
   const keyProps = k => ({
     k,
-    pressed: pressed.has(k.code),
+    pressed: pressed.has(k.code) || demoCodes.includes(k.code),
     target: targetCodes.includes(k.code),
     wrong: wrongCode === k.code,
     onDown,

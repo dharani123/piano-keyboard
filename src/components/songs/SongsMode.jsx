@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { engine } from '../../audio/engine.js';
 import { loadTanpura, saveTanpura, startTanpura } from '../../songs/tanpura.js';
+import TanpuraControl from './TanpuraControl.jsx';
 import { keyAt } from '../../data/keymap.js';
 import { SONG_LIBRARY } from '../../songs/library.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
@@ -354,10 +355,7 @@ export default function SongsMode({ piano, kind }) {
         </div>
 
         {song.carnatic && (
-          <label className="unlock">
-            <input type="checkbox" checked={drone} onChange={e => toggleDrone(e.target.checked)} />
-            Tanpura drone (Sa–Pa)
-          </label>
+          <TanpuraControl on={drone} onToggle={toggleDrone} />
         )}
         {mode === 'play' && (
           <label className="unlock">

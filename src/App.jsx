@@ -181,6 +181,7 @@ export default function App() {
           shift={layout}
           pressed={pressed}
           targetCodes={highlight?.targets ?? []}
+          demoCodes={highlight?.demo ?? []}
           wrongCode={highlight?.wrong}
           onDown={noteDown}
           onUp={noteUp}
