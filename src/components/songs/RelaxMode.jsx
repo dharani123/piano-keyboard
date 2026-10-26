@@ -26,7 +26,7 @@ export default function RelaxMode({ piano }) {
   const lines = useMemo(() => journeyLines(carnaticSongs(raga)), [raga]);
   const exercises = useMemo(() => lines.filter(l => l.line === 0), [lines]);
   const [pos, setPos] = useState(() => Math.min(loadRelaxPos(), lines.length - 1));
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(0.75);
   const [drone, setDrone] = useState(loadTanpura);
   const droneOn = useRef(drone); // read by tuneDrone mid-run
   const [listenFirst, setListenFirst] = useState(true);
