@@ -9,14 +9,11 @@ import { createPlay, press, advance, pitchKey } from '../../songs/player.js';
 import { markRelaxFinished } from '../../songs/best.js';
 import TanpuraControl from './TanpuraControl.jsx';
 import RagaSelect from './RagaSelect.jsx';
-import FallingNotes, { FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
+import FallingNotes, { FallSpace, FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 
 const SPEEDS = [0.5, 0.75, 1];
 const RAGA_KEY = 'desk-piano-raga';
-const VIEW_KEY = 'desk-piano-relax-view';
-// Still swaras: no moving tiles (staring at falling notes leaves a 'waterfall' illusion)
-const VIEWS = [['falling', 'Falling notes'], ['still', 'Still swaras']];
-const BREATHER = 2; // seconds between exercises
+const BREATHER = 20; // seconds of break between exercises, counted down on screen
 const LOOKAHEAD = 1.5; // seconds of the app's notes created ahead of time
 const FEED_EVERY = 200; // ms between topping up (hidden tabs slow this to ~1 s, still inside the lookahead)
 
@@ -34,14 +31,12 @@ export default function RelaxMode({ piano }) {
     const p = Math.min(loadRelaxPos(), lines.length - 1);
     return p - lines[p].line;
   });
-  const [view, setView] = useState(() => {
-    try { return localStorage.getItem(VIEW_KEY) === 'still' ? 'still' : 'falling'; } catch { return 'falling'; }
-  });
   const [speed, setSpeed] = useState(0.75);
   const [drone, setDrone] = useState(loadTanpura);
   const droneOn = useRef(drone); // read by tuneDrone mid-run
   const [listenFirst, setListenFirst] = useState(true);
   const [step, setStep] = useState('idle'); // idle | listen | play | rest
+  const [restLeft, setRestLeft] = useState(0); // seconds left in the break
   const [sounding, setSounding] = useState(-1); // event index heard right now
   const [, setFrame] = useState(0);
   const run = useRef(null); // { pos, play, base, spb, last }
@@ -106,7 +101,7 @@ export default function RelaxMode({ piano }) {
   function start() {
     const base = piano.octave;
     piano.setStatus(RAGAS[raga].name.slice(0, 14).toUpperCase());
-    requestAnimationFrame(() => (view === 'still' ? piano.slot : piano.fallSlot)?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    requestAnimationFrame(() => piano.fallSlot?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
     playLine(pos, base);
   }
 
@@ -193,7 +188,14 @@ export default function RelaxMode({ piano }) {
         markRelaxFinished(lines[plan.segments.at(-1).pos].id);
         // a short breather, then straight on to the next varisai
         const np = goTo(plan.segments.at(-1).pos + 1);
-        timer.current = setTimeout(() => playLine(np, base), BREATHER * 1000);
+        const restEnd = Date.now() + BREATHER * 1000;
+        const countdown = () => {
+          const left = Math.ceil((restEnd - Date.now()) / 1000);
+          if (left <= 0) { playLine(np, base); return; }
+          setRestLeft(left);
+          timer.current = setTimeout(countdown, 250);
+        };
+        countdown();
         return;
       }
       frame.current = requestAnimationFrame(tick);
@@ -206,11 +208,6 @@ export default function RelaxMode({ piano }) {
     if (step !== 'idle') playLine(p, run.current?.base ?? piano.octave);
   }
 
-  function pickView(next) {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage unavailable */ }
-  }
-
   function pickRaga(next) {
     setRaga(next);
     try { localStorage.setItem(RAGA_KEY, next); } catch { /* storage unavailable */ }
@@ -218,23 +215,17 @@ export default function RelaxMode({ piano }) {
 
   const r = run.current;
   const active = step !== 'idle';
-  const fall = view === 'falling' && (step === 'play' || step === 'listen') && r?.play && (
-    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle listen={r.listenNotes} />
-  );
-
-  // On your turn, the swara due now (the same one glowing on the piano)
-  const due = step === 'play' && r?.play
-    ? r.play.notes.find(n => !n.hit && !n.missed && n.beat - r.play.beat <= 0.5)
-    : null;
-  const dueIndex = due ? line.events.findIndex(e => e.beat + (r.offset ?? 0) === due.beat) : -1;
+  const fall = (step === 'play' || step === 'listen') && r?.play
+    ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle listen={r.listenNotes} />
+    : <FallSpace slot={piano.fallSlot} />;
 
   // The current line as swaras, the sounding one lit while listening
   const lineView = (
-    <div className={'relax-line' + (view === 'still' ? ' still' : '')}>
+    <div className="relax-line">
       {line.events.map((e, i) => {
         const done = step === 'play' && r?.play?.notes.find(n => n.beat === e.beat + (r.offset ?? 0))?.hit;
         return (
-          <span key={i} className={'relax-swara' + (i === sounding || (view === 'still' && i === dueIndex) ? ' on' : '') + (done ? ' done' : '') + (line.talam?.marks.includes(e.beat) ? ' mark' : '')} style={{ flexGrow: e.beats }}>
+          <span key={i} className={'relax-swara' + (i === sounding ? ' on' : '') + (done ? ' done' : '') + (line.talam?.marks.includes(e.beat) ? ' mark' : '')} style={{ flexGrow: e.beats }}>
             {e.notes[0].name}{' ,'.repeat(e.beats - 1)}
           </span>
         );
@@ -251,7 +242,7 @@ export default function RelaxMode({ piano }) {
       <div className="relax-step">
         {step === 'listen' && '👂 Listen…'}
         {step === 'play' && '🎹 Your turn: flow with it'}
-        {step === 'rest' && (pos > 0 && lines[pos].line === 0 ? `✨ Breathe… next: ${lines[pos].title}` : '…')}
+        {step === 'rest' && `✨ Break… next: ${lines[pos].title} in ${restLeft}s`}
       </div>
       {lineView}
       <div className="exercise-actions">
@@ -280,12 +271,6 @@ export default function RelaxMode({ piano }) {
         <RagaSelect raga={raga} disabled={active} onPick={pickRaga} />
       </div>
       <p className="song-note">The varisai keeps flowing at a steady tempo; missed swaras just drift past{listenFirst ? ': the app plays a line, you echo it straight back, in rhythm' : ''}.</p>
-      <div className="song-option">
-        <span className="option-label">View</span>
-        <select className="relax-view" value={view} onChange={e => pickView(e.target.value)}>
-          {VIEWS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-        </select>
-      </div>
       <div className="song-option">
         <span className="option-label">Speed</span>
         {SPEEDS.map(v => (

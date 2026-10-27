@@ -11,7 +11,7 @@ import { loadBest, saveBest, isPassed, starsFor } from '../../songs/best.js';
 import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
 import RagaSelect from './RagaSelect.jsx';
-import FallingNotes, { FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
+import FallingNotes, { FallSpace, FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 import { createPlay, press, advance, score, pendingGroup, pitchKey } from '../../songs/player.js';
 import { starsForAccuracy } from '../../lessons/rhythm.js';
 
@@ -199,9 +199,9 @@ export default function SongsMode({ piano, kind }) {
   }
 
   const r = run.current;
-  const fall = phase === 'playing' && r && (
-    <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={r.song.layout ?? 0} />
-  );
+  const fall = phase === 'playing' && r
+    ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={r.song.layout ?? 0} />
+    : <FallSpace slot={piano.fallSlot} />;
 
   const progress = r ? Math.max(0, Math.min(1, r.play.beat / r.play.totalBeats)) : 0;
   const chordNow = r && song.chords

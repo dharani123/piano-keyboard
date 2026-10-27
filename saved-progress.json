@@ -74,11 +74,13 @@
     "sarali-14@mayamalavagowla:relax": 2,
     "janta-1@mayamalavagowla:relax": 2,
     "janta-2@mayamalavagowla:relax": 2,
-    "sarali-1@kanakangi:relax": 2
+    "sarali-1@kanakangi:relax": 2,
+    "sarali-2@kanakangi:relax": 3,
+    "sarali-3@kanakangi:relax": 3
   },
   "desk-piano-colours": "gray",
   "desk-piano-relax": {
-    "pos": 2
+    "pos": 10
   },
   "desk-piano-relax-view": "falling",
   "desk-piano-size": "big",

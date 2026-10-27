@@ -10,6 +10,12 @@ const BLACK_SEMITONES = [1, 3, 6, 8, 10];
 // The on-screen key for a note, `rel` octaves above the song's start octave, in keyboard layout `shift`
 export const codeFor = (semitone, rel, shift = 0) => keyAt(semitone, rel, shift)?.code;
 
+// The empty fall area, kept while no notes are falling so the piano never jumps
+export function FallSpace({ slot }) {
+  if (!slot) return null;
+  return createPortal(<div className="fall" style={{ height: FALL_HEIGHT }} />, slot);
+}
+
 // Notes falling above the piano, each in the column of its key.
 // play = a player.js state; base = the octave the song started in.
 // gentle: missed notes just fade instead of turning red (Relax mode).
