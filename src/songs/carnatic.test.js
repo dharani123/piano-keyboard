@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSwaras, carnaticSongs, CARNATIC, CARNATIC_LEVELS, RAGAS } from './carnatic.js';
+import { parseSwaras, carnaticSongs, jantaFor, CARNATIC, CARNATIC_LEVELS, RAGAS, HOME_RAGAS } from './carnatic.js';
 import { keyAt } from '../data/keymap.js';
 
 const line = song => song.events.map(e => e.notes[0].swara + (e.beats > 1 ? `/${e.beats}` : '')).join(' ');
@@ -76,5 +76,20 @@ describe('exercises', () => {
     expect(j2.totalBeats).toBe(80);
     expect(line(j3).startsWith('S S R R G G R R S S R R G G M M')).toBe(true);
     expect(line(j3).endsWith('M M G G R R G G M M G G R R S S')).toBe(true);
+  });
+
+  it('keeps all 12 janta varisais in the home ragas and a fixed random 6 elsewhere', () => {
+    const janta = raga => carnaticSongs(raga).filter(s => s.level === 'Janta Varisai').map(s => s.id.split('@')[0]);
+    for (const raga of HOME_RAGAS) expect(janta(raga)).toHaveLength(12);
+    const picks = new Set();
+    for (const raga of Object.keys(RAGAS).filter(r => !HOME_RAGAS.includes(r))) {
+      const ids = janta(raga);
+      expect(ids, raga).toHaveLength(6);
+      expect(ids, raga).toEqual([...ids].sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1])));
+      expect(jantaFor(raga)).toEqual(ids); // same pick every time
+      picks.add(ids.join());
+    }
+    expect(picks.size).toBeGreaterThan(30); // ragas don't all get the same six
+    expect(carnaticSongs('kalyani').filter(s => s.level !== 'Janta Varisai')).toHaveLength(14 + 3);
   });
 });

@@ -173,17 +173,47 @@ export function fitKeys(swaras, raga) {
   return { sa: 0, layout: 0 };
 }
 
-// The exercises as songs in one raga; ids carry the raga so stars are kept per raga
-export const carnaticSongs = raga => CARNATIC.map(c => {
-  const { sa, layout } = fitKeys(c.swaras, raga);
-  return {
-    ...c,
-    id: `${c.id}@${raga}`,
-    bpm: CARNATIC_BPM,
-    carnatic: true,
-    sa,
-    layout,
-    talam: TALAMS[c.talam],
-    ...parseSwaras(c.swaras, raga, sa),
+// Home ragas get all 12 janta varisais; every other raga gets 6 of them, picked
+// at random but fixed per raga (seeded by its id), so its list never reshuffles
+export const HOME_RAGAS = ['mayamalavagowla', 'shankarabharanam'];
+export const JANTA_PICK = 6;
+function seeded(text) {
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    h = (h + 0x6d2b79f5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-});
+}
+export function jantaFor(raga) {
+  const all = CARNATIC.filter(c => c.level === 'Janta Varisai').map(c => c.id);
+  if (HOME_RAGAS.includes(raga)) return all;
+  const rand = seeded(raga);
+  const picked = [...all];
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  const keep = new Set(picked.slice(0, JANTA_PICK));
+  return all.filter(id => keep.has(id)); // back in the traditional order
+}
+
+// The exercises as songs in one raga; ids carry the raga so stars are kept per raga
+export const carnaticSongs = raga => {
+  const janta = new Set(jantaFor(raga));
+  return CARNATIC.filter(c => c.level !== 'Janta Varisai' || janta.has(c.id)).map(c => {
+    const { sa, layout } = fitKeys(c.swaras, raga);
+    return {
+      ...c,
+      id: `${c.id}@${raga}`,
+      bpm: CARNATIC_BPM,
+      carnatic: true,
+      sa,
+      layout,
+      talam: TALAMS[c.talam],
+      ...parseSwaras(c.swaras, raga, sa),
+    };
+  });
+};
