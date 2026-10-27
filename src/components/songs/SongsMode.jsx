@@ -7,7 +7,7 @@ import { keyAt } from '../../data/keymap.js';
 import { SONG_LIBRARY } from '../../songs/library.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
 import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, swaraName, carnaticSongs } from '../../songs/carnatic.js';
-import { loadBest, saveBest, isPassed } from '../../songs/best.js';
+import { loadBest, saveBest, isPassed, starsFor } from '../../songs/best.js';
 import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
 import RagaSelect from './RagaSelect.jsx';
@@ -271,7 +271,7 @@ export default function SongsMode({ piano, kind }) {
               >
                 <span className="lesson-link-title">{s.title}</span>
                 <span className="lesson-link-stars">
-                  {isLocked(s) ? '🔒' : best[`${s.id}:${mode}`] ? '★'.repeat(best[`${s.id}:${mode}`]) : ''}
+                  {isLocked(s) ? '🔒' : '★'.repeat(starsFor(best, s.id, mode))}
                 </span>
               </button>
             ))}

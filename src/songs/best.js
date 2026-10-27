@@ -1,7 +1,7 @@
 import { PASS_STARS } from '../lessons/progress.js';
 
 // Best stars per song and mode: { "songId:mode": 0-3 }. Carnatic exercises
-// finished in Relax are stored as "songId:relax", which counts as a pass.
+// finished in Relax are stored as "songId:relax": a pass, shown as ★★★.
 const KEY = 'desk-piano-songs';
 export function loadBest() {
   try { return JSON.parse(localStorage.getItem(KEY)) ?? {}; } catch { return {}; }
@@ -14,7 +14,11 @@ export function saveBest(best) {
 export const isPassed = (best, id) =>
   Math.max(best[`${id}:wait`] ?? 0, best[`${id}:play`] ?? 0, best[`${id}:relax`] ?? 0) >= PASS_STARS;
 
-export const withRelaxFinish = (best, id) => ({ ...best, [`${id}:relax`]: PASS_STARS });
+export const RELAX_STARS = 3;
+export const withRelaxFinish = (best, id) => ({ ...best, [`${id}:relax`]: RELAX_STARS });
+
+// Stars shown for a song in a mode; finishing it in Relax is worth full stars
+export const starsFor = (best, id, mode) => Math.max(best[`${id}:${mode}`] ?? 0, best[`${id}:relax`] ? RELAX_STARS : 0);
 
 // Relax calls this when an exercise has been played to its last line
 export function markRelaxFinished(id) {
