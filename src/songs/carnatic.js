@@ -57,11 +57,17 @@ export const TALAMS = {
   eka: { name: 'Eka', beats: 4, marks: [], parts: '4' },
 };
 
-// How swaras are shown: full names, a dot above for the upper octave (Ṡa), below for the lower (Ṇi)
-export const SWARA_NAMES = { S: 'Sa', R: 'Ri', G: 'Ga', M: 'Ma', P: 'Pa', D: 'Da', N: 'Ni' };
-const dotted = (swara, dot) => `${SWARA_NAMES[swara][0]}${dot}${SWARA_NAMES[swara].slice(1)}`;
-const upperName = swara => dotted(swara, '̇');
-const lowerName = swara => dotted(swara, '̣');
+// How swaras are shown (the user's own names): each key above Sa has one name,
+// whatever role it plays in the raga. White keys take the plain swara (D = Ri,
+// E = Ga …); C♯ = Ri1, D♯ = Ga2, F♯ = Ma2, G♯ = Da1, A♯ = Ni2.
+// A dot above marks the upper octave (Ṡa), below the lower (Ṇi).
+export const SWARA_BY_SEMITONE = ['Sa', 'Ri1', 'Ri', 'Ga2', 'Ga', 'Ma', 'Ma2', 'Pa', 'Da1', 'Da', 'Ni2', 'Ni'];
+const dotted = (name, dot) => `${name[0]}${dot}${name.slice(1)}`;
+// semis = semitones above Sa (may be negative or past the octave)
+export const swaraName = semis => {
+  const name = SWARA_BY_SEMITONE[((semis % 12) + 12) % 12];
+  return semis >= 12 ? dotted(name, '̇') : semis < 0 ? dotted(name, '̣') : name;
+};
 
 // karnatik.com style → ours: lowercase = middle octave, capital = upper,
 // "n." = lower; "-" only joins swaras visually
@@ -121,59 +127,13 @@ const DHATU = [
   lines(...rise('s r s g | r g | r m', 's m g r | s r | g m')),
 ];
 
-// Mel sthayi: each one reaches one swara higher in the upper octave
-const MEL_OPEN = ['s r g m | p d | n S', 'S , , , | S , | , ,'];
-const MEL_TURN = 'S R S n | d p | m p';
-const MEL_CLOSE = ['d n S R | S n | d p', 'S n d p | m g | r s'];
-const MEL_PEAKS = ['d n S R | S S | R S', 'd n S R | G R | S R', 'd n S R | G M | G R', 'd n S R | G M | P M'];
-const MEL = [
-  lines(...MEL_OPEN, ...MEL_CLOSE),
-  ...MEL_PEAKS.map((_, top) => lines(
-    ...MEL_OPEN,
-    ...MEL_PEAKS.slice(0, top + 1).reverse().flatMap((row, i) => [row, i === 0 && top === 3 ? 'G R S n | d p | m p' : MEL_TURN]),
-    ...MEL_CLOSE,
-  )),
-];
-
-// Mandra sthayi: each one reaches one swara lower in the lower octave (karnatik.com
-// prints the climb back as "d n."; it is the lower Da, d.)
-const MANDRA_OPEN = ['S n d p | m g | r s', 's , , , | s , | , ,'];
-const MANDRA_TURN = 's n. s r | g m | p m';
-const MANDRA_CLOSE = ['g r s n. | s r | g m', 's r g m | p d | n S'];
-const MANDRA_DIPS = ['g r s n. | s s | n. s', 'g r s n. | d. n. | s n.', 'g r s n. | d. p. | d. n.', 'g r s n. | d. p. | m. p.'];
-const MANDRA = [
-  lines(...MANDRA_OPEN, ...MANDRA_CLOSE),
-  ...MANDRA_DIPS.map((_, low) => lines(
-    ...MANDRA_OPEN,
-    ...MANDRA_DIPS.slice(0, low + 1).reverse().flatMap((row, i) => [row, i === 0 && low === 3 ? 'd. n. s r | g m | p m' : MANDRA_TURN]),
-    ...MANDRA_CLOSE,
-  )),
-];
-
-// Alankarams: the same climb and fall, set to each of the seven suladi talams
-const ALANKARAM = [
-  ['dhruva', 'Dhruva', 's r g m | g r | s r g r | s r g m'],
-  ['matya', 'Matya', 's r g r | s r | s r g m'],
-  ['rupaka', 'Rupaka', 's r | s r g m'],
-  ['jhampa', 'Jhampa', 's r g s r s r | g | m ,'],
-  ['triputa', 'Triputa', 's r g | s r | g m'],
-  ['ata', 'Ata', 's r , g , | s , r g , | m , | m ,'],
-  ['eka', 'Eka', 's r g m'],
-].map(([talam, name, row]) => {
-  const down = row.replace(/[srgmpdn]/g, c => DOWN[SC.indexOf(c)]);
-  return { talam, name, swaras: lines(...[0, 1, 2, 3, 4].map(i => shift(row, i, SC)), ...[0, 1, 2, 3, 4].map(i => shift(down, i, DOWN))) };
-});
-
 const set = (list, id, title, level) => list.map((swaras, i) => ({ id: `${id}-${i + 1}`, title: `${title} ${i + 1}`, level, swaras, talam: 'adi' }));
 export const CARNATIC = [
   ...set(SARALI, 'sarali', 'Sarali Varisai', 'Sarali Varisai'),
   ...set(JANTA, 'janta', 'Janta Varisai', 'Janta Varisai'),
   ...set(DHATU, 'dhatu', 'Dhatu Varisai', 'Dhatu Varisai'),
-  ...set(MEL, 'mel', 'Mel Sthayi', 'Mel Sthayi Varisai'),
-  ...set(MANDRA, 'mandra', 'Mandra Sthayi', 'Mandra Sthayi Varisai'),
-  ...ALANKARAM.map((a, i) => ({ id: `alankaram-${i + 1}`, title: `Alankaram ${i + 1} · ${a.name}`, level: 'Alankaram', swaras: a.swaras, talam: a.talam })),
 ];
-export const CARNATIC_LEVELS = ['Sarali Varisai', 'Janta Varisai', 'Dhatu Varisai', 'Mel Sthayi Varisai', 'Mandra Sthayi Varisai', 'Alankaram'];
+export const CARNATIC_LEVELS = ['Sarali Varisai', 'Janta Varisai', 'Dhatu Varisai'];
 export const CARNATIC_BPM = 70;
 
 // "S R G ," → falling-notes events in the given raga, with Sa `sa` semitones from C
@@ -191,8 +151,8 @@ export function parseSwaras(text, raga, sa = 0) {
       if (!m) throw new Error(`Bad swara "${token}"`);
       const [, swara, mark] = m;
       const pitch = sa + semis[swara] + (mark === "'" ? 12 : mark === '.' ? -12 : 0);
-      const name = mark === "'" ? upperName(swara) : mark === '.' ? lowerName(swara) : SWARA_NAMES[swara];
-      events.push({ beat, beats: 1, notes: [{ name, semitone: ((pitch % 12) + 12) % 12, oct: Math.floor(pitch / 12) }] });
+      const name = swaraName(pitch - sa);
+      events.push({ beat, beats: 1, notes: [{ name, swara, semitone: ((pitch % 12) + 12) % 12, oct: Math.floor(pitch / 12) }] });
     }
     beat += 1;
   }

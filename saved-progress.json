@@ -1,6 +1,6 @@
 {
   "desk-piano-tanpura": 0,
-  "desk-piano-hide-outlines": 1,
+  "desk-piano-hide-outlines": 0,
   "desk-piano-songs": {
     "hot-cross-buns:wait": 3,
     "mary:wait": 3,
@@ -40,12 +40,47 @@
     "janta-12@shankarabharanam:relax": 2,
     "dhatu-1@shankarabharanam:relax": 2,
     "dhatu-2@shankarabharanam:relax": 2,
-    "dhatu-3@shankarabharanam:relax": 2
+    "dhatu-3@shankarabharanam:relax": 2,
+    "mel-1@shankarabharanam:relax": 2,
+    "mel-2@shankarabharanam:relax": 2,
+    "mel-3@shankarabharanam:relax": 2,
+    "mel-4@shankarabharanam:relax": 2,
+    "mandra-1@shankarabharanam:relax": 2,
+    "mandra-2@shankarabharanam:relax": 2,
+    "mandra-3@shankarabharanam:relax": 2,
+    "mandra-4@shankarabharanam:relax": 2,
+    "alankaram-1@shankarabharanam:relax": 2,
+    "alankaram-2@shankarabharanam:relax": 2,
+    "alankaram-3@shankarabharanam:relax": 2,
+    "alankaram-4@shankarabharanam:relax": 2,
+    "alankaram-5@shankarabharanam:relax": 2,
+    "alankaram-6@shankarabharanam:relax": 2,
+    "alankaram-7@shankarabharanam:relax": 2,
+    "dhatu-3@shankarabharanam:play": 3,
+    "sarali-7@shankarabharanam:relax": 2,
+    "sarali-1@mayamalavagowla:relax": 2,
+    "sarali-2@mayamalavagowla:relax": 2,
+    "sarali-3@mayamalavagowla:relax": 2,
+    "sarali-4@mayamalavagowla:relax": 2,
+    "sarali-5@mayamalavagowla:relax": 2,
+    "sarali-6@mayamalavagowla:relax": 2,
+    "sarali-7@mayamalavagowla:relax": 2,
+    "sarali-8@mayamalavagowla:relax": 2,
+    "sarali-9@mayamalavagowla:relax": 2,
+    "sarali-10@mayamalavagowla:relax": 2,
+    "sarali-11@mayamalavagowla:relax": 2,
+    "sarali-12@mayamalavagowla:relax": 2,
+    "sarali-13@mayamalavagowla:relax": 2,
+    "sarali-14@mayamalavagowla:relax": 2,
+    "janta-1@mayamalavagowla:relax": 2,
+    "janta-2@mayamalavagowla:relax": 2,
+    "sarali-1@kanakangi:relax": 2
   },
   "desk-piano-colours": "gray",
   "desk-piano-relax": {
-    "pos": 328
+    "pos": 2
   },
+  "desk-piano-relax-view": "falling",
   "desk-piano-size": "big",
   "desk-piano-ear": {
     "notes": {
@@ -644,6 +679,6 @@
       "song-twinkle": 2
     }
   },
-  "desk-piano-raga": "shankarabharanam",
+  "desk-piano-raga": "kanakangi",
   "desk-piano-tanpura-volume": 0.2
 }

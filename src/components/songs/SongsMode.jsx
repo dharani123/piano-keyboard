@@ -6,7 +6,7 @@ import TanpuraControl from './TanpuraControl.jsx';
 import { keyAt } from '../../data/keymap.js';
 import { SONG_LIBRARY } from '../../songs/library.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
-import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, SWARA_NAMES, carnaticSongs } from '../../songs/carnatic.js';
+import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, swaraName, carnaticSongs } from '../../songs/carnatic.js';
 import { loadBest, saveBest, isPassed } from '../../songs/best.js';
 import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
@@ -58,7 +58,7 @@ export default function SongsMode({ piano, kind }) {
   const speeds = song.carnatic ? CARNATIC_SPEEDS : SPEEDS;
   // Carnatic exercises are always played along at tempo
   const mode = kind === 'carnatic' ? 'play' : modeChoice;
-  // Mel/Mandra Sthayi slide the keys two places while they're picked
+  // an exercise that needs notes off the home row slides the keys two places while it's picked
   const layout = song.layout ?? 0;
   useEffect(() => { piano.setLayout(layout); }, [layout]);
   useEffect(() => () => pianoRef.current.setLayout(0), []);
@@ -288,7 +288,7 @@ export default function SongsMode({ piano, kind }) {
         {song.carnatic && (
           <>
             <div className="swara-map">
-              {[...SWARA_KEYS.map(sw => [SWARA_NAMES[sw], song.sa + RAGAS[raga].semitones[sw]]), [`S\u0307a`, song.sa + 12]].map(([name, pitch]) => {
+              {[...SWARA_KEYS.map(sw => RAGAS[raga].semitones[sw]), 12].map(semis => [swaraName(semis), song.sa + semis]).map(([name, pitch]) => {
                 const semi = ((pitch % 12) + 12) % 12;
                 const rel = Math.floor(pitch / 12);
                 const k = keyAt(semi, rel, layout);

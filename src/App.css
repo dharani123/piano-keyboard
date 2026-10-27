@@ -6,6 +6,10 @@
   --text: #e8e6e1;
   --muted: #8b8f99;
   --accent: #f2b33d;
+  --accent-ink: #1b1408;      /* text on an accent-filled button */
+  --accent-tint: #3a2e14;     /* dark accent backgrounds */
+  --accent-tint-soft: #2a2414;
+  --accent-glow: rgba(242, 179, 61, .6);
   --lcd-bg: #1d1607;
   --lcd-text: #ffb627;
   /* stealth piano: gray outlines only, no white/black keys */
@@ -50,7 +54,7 @@ button, select {
   cursor: pointer;
 }
 button:hover, select:hover { background: #353842; }
-button.primary { background: var(--accent); color: #1b1408; border-color: var(--accent); font-weight: 600; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 
 .app {
   max-width: 980px;
@@ -126,7 +130,7 @@ button.primary { background: var(--accent); color: #1b1408; border-color: var(--
 .stepper-val { min-width: 28px; text-align: center; font-family: ui-monospace, monospace; font-size: 16px; }
 .pedal { margin-top: 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .pedal small { color: var(--muted); font-size: 11px; }
-.pedal.on { background: #3a2e14; border-color: var(--accent); color: var(--accent); }
+.pedal.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
 
 /* ---- piano ---- */
 .piano {
@@ -220,7 +224,7 @@ select.piano-option { padding: 2px 6px; }
 .theory ul { margin: 0 0 12px; padding-left: 20px; }
 .theory li { margin-bottom: 4px; }
 .theory b { color: #fff; }
-.theory .tip { background: #2a2414; border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 6px 6px 0; }
+.theory .tip { background: var(--accent-tint-soft); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 6px 6px 0; }
 .theory figure { margin: 4px 0 14px; }
 .theory figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
@@ -290,7 +294,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 .result { text-align: center; padding: 4px 0; }
 .result-stars { font-size: 44px; letter-spacing: 6px; color: #3a3d46; }
-.result-stars .on { color: var(--accent); text-shadow: 0 0 12px rgba(242, 179, 61, .6); }
+.result-stars .on { color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
 .result-msg { font-size: 20px; margin: 6px 0; }
 .result-detail { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
 .result-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
@@ -357,12 +361,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .ng-key b { font-size: 15px; }
 .ng-key small { font-size: 11px; color: var(--muted); }
 .ng-key.weak { background: #4a2523; border-color: var(--wrong); }
-.ng-key.ok { background: #4a3a1b; border-color: var(--accent); }
+.ng-key.ok { background: var(--accent-tint); border-color: var(--accent); }
 .ng-key.mastered { background: #17423d; border-color: var(--target); }
 .gym-legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); margin: 8px 0 16px; }
 .gym-legend span::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; background: #2a2c33; border: 1px solid #3a3d46; }
 .gym-legend .weak::before { background: #4a2523; border-color: var(--wrong); }
-.gym-legend .ok::before { background: #4a3a1b; border-color: var(--accent); }
+.gym-legend .ok::before { background: var(--accent-tint); border-color: var(--accent); }
 .gym-legend .mastered::before { background: #17423d; border-color: var(--target); }
 .gym-confusions { margin: 0; padding-left: 18px; line-height: 1.8; }
 .gym-side { display: flex; flex-direction: column; gap: 10px; border-left: 1px solid #2a2c33; padding-left: 18px; }
@@ -461,13 +465,42 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .relax-swara.mark { margin-left: 10px; }
 .relax-swara.on { background: #3a3d45; color: var(--text); border-color: #9a9ea8; }
 .relax-swara.done { color: var(--text); border-color: #4a4d55; }
+.relax-line.still .relax-swara { font-size: 22px; padding: 12px 4px; } /* the swaras are the only guide in Still view */
+.relax-view { background: #15161a; color: var(--text); border: 1px solid #3a3d46; border-radius: 6px; padding: 4px 8px; }
 .relax-step { font-size: 15px; color: var(--muted); min-height: 22px; }
-.relax-done { font-size: 15px; margin: 4px 0 10px; }
 .relax-card .exercise-actions { flex-wrap: wrap; }
 .fall-note.gone { opacity: .3; }
 .fall-note.listen { opacity: .55; border-style: dashed; } /* the app is playing this one for you to hear */
 
 /* ---- colour modes (Grayscale is the default look above) ---- */
+/* accent (sliders, stars, active buttons, LCD, swara highlights): gray / white / yellow */
+.colours-gray {
+  --accent: #a4a8b1;
+  --accent-ink: #15161a;
+  --accent-tint: #2e3036;
+  --accent-tint-soft: #24262b;
+  --accent-glow: rgba(164, 168, 177, .5);
+  --lcd-bg: #17181b;
+  --lcd-text: #b4b8c0;
+}
+.colours-bw {
+  --accent: #f4f3ef;
+  --accent-ink: #111214;
+  --accent-tint: #3a3b3f;
+  --accent-tint-soft: #26272b;
+  --accent-glow: rgba(255, 255, 255, .55);
+  --lcd-bg: #111214;
+  --lcd-text: #f4f3ef;
+}
+.colours-colour {
+  --accent: #f2b33d;
+  --accent-ink: #1b1408;
+  --accent-tint: #3a2e14;
+  --accent-tint-soft: #2a2414;
+  --accent-glow: rgba(242, 179, 61, .6);
+  --lcd-bg: #1d1607;
+  --lcd-text: #ffb627;
+}
 .colours-bw {
   --white-key: #f1f0ec;
   --white-key-down: #c6c5c0;

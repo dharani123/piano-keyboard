@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parseSwaras, carnaticSongs, CARNATIC, CARNATIC_LEVELS, RAGAS } from './carnatic.js';
 import { keyAt } from '../data/keymap.js';
 
-const line = song => song.events.map(e => e.notes[0].name[0] + (e.beats > 1 ? `/${e.beats}` : '')).join(' ');
+const line = song => song.events.map(e => e.notes[0].swara + (e.beats > 1 ? `/${e.beats}` : '')).join(' ');
 
 describe('parseSwaras', () => {
   it('maps swaras to the raga and holds notes on ","', () => {
@@ -13,9 +13,14 @@ describe('parseSwaras', () => {
     expect(totalBeats).toBe(6);
   });
 
-  it('labels swaras with their full names', () => {
-    const { events } = parseSwaras("S R G M P D N S'", 'mayamalavagowla');
-    expect(events.map(e => e.notes[0].name)).toEqual(['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'Ṡa']);
+  it('names swaras by key: white = plain, C♯ Ri1, D♯ Ga2, F♯ Ma2, G♯ Da1, A♯ Ni2', () => {
+    const names = raga => parseSwaras("S R G M P D N S'", raga).events.map(e => e.notes[0].name);
+    expect(names('mayamalavagowla')).toEqual(['Sa', 'Ri1', 'Ga', 'Ma', 'Pa', 'Da1', 'Ni', 'S\u0307a']);
+    expect(names('shankarabharanam')).toEqual(['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'S\u0307a']);
+    expect(names('kanakangi')).toEqual(['Sa', 'Ri1', 'Ri', 'Ma', 'Pa', 'Da1', 'Da', 'S\u0307a']);
+    expect(names('kalyani')).toEqual(['Sa', 'Ri', 'Ga', 'Ma2', 'Pa', 'Da', 'Ni', 'S\u0307a']);
+    expect(names('kharaharapriya')).toEqual(['Sa', 'Ri', 'Ga2', 'Ma', 'Pa', 'Da', 'Ni2', 'S\u0307a']);
+    expect(parseSwaras("R' N.", 'mayamalavagowla').events.map(e => e.notes[0].name)).toEqual(['R\u0307i1', 'N\u0323i']);
   });
 
   it('uses the white keys in Shankarabharanam', () => {
@@ -48,21 +53,19 @@ describe('exercises', () => {
   });
 
   it('has the whole beginner course and fills whole talam cycles', () => {
-    expect(CARNATIC_LEVELS.map(l => CARNATIC.filter(c => c.level === l).length)).toEqual([14, 12, 3, 5, 5, 7]);
+    expect(CARNATIC_LEVELS.map(l => CARNATIC.filter(c => c.level === l).length)).toEqual([14, 12, 3]);
     for (const raga of Object.keys(RAGAS)) {
       for (const s of carnaticSongs(raga)) expect(s.totalBeats % s.talam.beats, s.title).toBe(0);
     }
   });
 
-  it('keeps every note on a key, sliding the keys before moving Sa', () => {
+  it('keeps every exercise on the home row with Sa on C', () => {
     for (const raga of Object.keys(RAGAS)) {
       for (const s of carnaticSongs(raga)) {
         for (const e of s.events) expect(keyAt(e.notes[0].semitone, e.notes[0].oct, s.layout), s.id).toBeTruthy();
-        if (!/^(mel|mandra)-/.test(s.id)) expect([s.sa, s.layout], s.id).toEqual([0, 0]);
+        expect([s.sa, s.layout], s.id).toEqual([0, 0]);
       }
     }
-    const moved = carnaticSongs('mayamalavagowla').filter(s => s.sa || s.layout).map(s => `${s.id.split('@')[0]} ${s.sa} ${s.layout}`);
-    expect(moved).toEqual(['mel-5 2 -2', 'mandra-1 0 2', 'mandra-2 0 2', 'mandra-3 0 2', 'mandra-4 0 2', 'mandra-5 2 2']);
   });
 
   it('writes janta varisais 1–3 as doubled swaras up and back down', () => {
@@ -73,11 +76,5 @@ describe('exercises', () => {
     expect(j2.totalBeats).toBe(80);
     expect(line(j3).startsWith('S S R R G G R R S S R R G G M M')).toBe(true);
     expect(line(j3).endsWith('M M G G R R G G M M G G R R S S')).toBe(true);
-  });
-
-  it('sets each alankaram to its talam', () => {
-    const al = carnaticSongs('mayamalavagowla').filter(s => s.level === 'Alankaram');
-    expect(al.map(s => s.talam.beats)).toEqual([14, 10, 6, 10, 7, 14, 4]);
-    expect(al.map(s => s.totalBeats / s.talam.beats)).toEqual([10, 10, 10, 10, 10, 10, 10]);
   });
 });
