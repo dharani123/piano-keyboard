@@ -3,27 +3,24 @@ import { createPortal } from 'react-dom';
 import { engine } from '../../audio/engine.js';
 import { loadTanpura, saveTanpura, startTanpura } from '../../songs/tanpura.js';
 import TanpuraControl from './TanpuraControl.jsx';
-import { keyAt } from '../../data/keymap.js';
+import AmbientControl from './AmbientControl.jsx';
+import { loadAmbient, saveAmbient, startAmbient } from '../../songs/ambient.js';
+import { SongList, CarnaticInfo, CARNATIC_SPEEDS, speedLabel } from './CarnaticParts.jsx';
 import { SONG_LIBRARY } from '../../songs/library.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
-import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, swaraName, carnaticSongs } from '../../songs/carnatic.js';
-import { loadBest, saveBest, isPassed, starsFor } from '../../songs/best.js';
+import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, GEETHAM_LEVEL, carnaticSongs, shownSongs, geethamSongs, loadCarnaticPick, saveCarnaticPick } from '../../songs/carnatic.js';
+import { loadBest, saveBest, isPassed } from '../../songs/best.js';
 import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
-import RagaSelect from './RagaSelect.jsx';
+import RagaNav from './RagaNav.jsx';
 import FallingNotes, { FallSpace, FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 import { createPlay, press, advance, score, pendingGroup, pitchKey } from '../../songs/player.js';
 import { starsForAccuracy } from '../../lessons/rhythm.js';
 
 const COUNT_IN = 4;
 const SPEEDS = [0.5, 0.75, 1];
-// Carnatic adds 1.25 and 1.5 speed (stepping stones) and 2nd speed: two swaras per beat
-const CARNATIC_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
-const speedLabel = (v, carnatic) => (carnatic && v === 1 ? '1st speed' : carnatic && (v === 1.25 || v === 1.5) ? `${v} speed` : carnatic && v === 2 ? '2nd speed' : `${Math.round(v * 100)}%`);
 // kind = which tab this is: 'western' or 'carnatic'
-const LEVELS = { western: ['Easy', 'Medium', 'Chords', 'My songs'], carnatic: CARNATIC_LEVELS };
-const BLACK_SEMITONES = [1, 3, 6, 8, 10];
-const SWARA_KEYS = ['S', 'R', 'G', 'M', 'P', 'D', 'N'];
+const LEVELS = { western: ['Easy', 'Medium', 'Chords', 'My songs'], carnatic: [...CARNATIC_LEVELS, GEETHAM_LEVEL] };
 const RAGA_KEY = 'desk-piano-raga';
 const MODES = {
   wait: { label: 'Wait for me', hint: 'The song stops at each note until you press it' },
@@ -33,18 +30,19 @@ const MESSAGES = ['Keep practising, it gets easier!', 'Nice start!', 'Great play
 
 
 
-export default function SongsMode({ piano, kind }) {
+export default function SongsMode({ piano, kind, modeSwitch }) {
   const [songId, setSongId] = useState(null);
   const [modeChoice, setMode] = useState('wait');
-  const [speed, setSpeed] = useState(1);
-  const [metronome, setMetronome] = useState(true);
+  const [speed, setSpeed] = useState(1); // Practice starts at 1st speed
+  const [metronome, setMetronome] = useState(kind !== 'carnatic'); // off by default in Carnatic Practice
   const [drone, setDrone] = useState(loadTanpura); // tanpura under Carnatic exercises
+  const [ambient, setAmbient] = useState(loadAmbient); // soft chords in the raga, shared with Relax
   const [best, setBest] = useState(loadBest);
   const [mySongs, setMySongs] = useState(loadMySongs);
   const [raga, setRaga] = useState(() => {
     try { return RAGAS[localStorage.getItem(RAGA_KEY)] ? localStorage.getItem(RAGA_KEY) : DEFAULT_RAGA; } catch { return DEFAULT_RAGA; }
   });
-  const carnatic = useMemo(() => carnaticSongs(raga), [raga]);
+  const carnatic = useMemo(() => [...shownSongs(carnaticSongs(raga), raga), ...geethamSongs(raga)], [raga]);
   const [phase, setPhase] = useState('pick'); // pick | playing | result
   const [result, setResult] = useState(null);
   const [, setFrame] = useState(0);
@@ -54,7 +52,12 @@ export default function SongsMode({ piano, kind }) {
   const pianoRef = useRef(piano);
   pianoRef.current = piano;
   const allSongs = kind === 'carnatic' ? carnatic : [...SONG_LIBRARY, ...mySongs];
-  const song = allSongs.find(s => s.id === songId) ?? allSongs[0];
+  // until you pick one, Carnatic opens on the varisai last picked in Relax (if it isn't locked)
+  const lastPick = kind === 'carnatic' && songId === null ? carnatic.findIndex(s => s.id.split('@')[0] === loadCarnaticPick()) : -1;
+  const lastPickOpen = lastPick === 0 || (lastPick > 0 && (isPassed(best, carnatic[lastPick - 1].id) || isPassed(best, carnatic[lastPick].id)));
+  const song = allSongs.find(s => s.id === songId) ?? (lastPickOpen ? carnatic[lastPick] : allSongs[0]);
+  // (not when it fell back to the first one because the Relax pick is locked here, so Relax keeps its place)
+  useEffect(() => { if (song.carnatic && (songId !== null || lastPickOpen)) saveCarnaticPick(song.id); }, [song.id]);
   const speeds = song.carnatic ? CARNATIC_SPEEDS : SPEEDS;
   // Carnatic exercises are always played along at tempo
   const mode = kind === 'carnatic' ? 'play' : modeChoice;
@@ -109,6 +112,7 @@ export default function SongsMode({ piano, kind }) {
     cancelAnimationFrame(frame.current);
     engine.cancelScheduled();
     engine.droneStop();
+    engine.ambientStop();
     light([]);
     run.current = null;
     pianoRef.current.setStatus(null);
@@ -123,9 +127,10 @@ export default function SongsMode({ piano, kind }) {
 
   function targetsOf(r) {
     const { play } = r;
+    // a key lights up the moment its falling note reaches it
     const near = play.mode === 'wait'
-      ? pendingGroup(play).filter(n => n.beat - play.beat <= 1)
-      : play.notes.filter(n => !n.hit && !n.missed && n.beat - play.beat <= 0.5);
+      ? pendingGroup(play).filter(n => n.beat <= play.beat)
+      : play.notes.filter(n => !n.hit && !n.missed && n.beat <= play.beat);
     return near.map(n => codeFor(n.semitone, n.octave - r.base, r.song.layout ?? 0)).filter(Boolean);
   }
 
@@ -139,6 +144,7 @@ export default function SongsMode({ piano, kind }) {
     play.beat = -leadBeats;
     const now = engine.now();
     if (song.carnatic && drone) startTanpura(base, song.sa, piano.transpose);
+    if (song.carnatic && ambient) startAmbient(raga, base, song.sa, piano.transpose);
     if (mode === 'play' && metronome) {
       const t0 = now + leadBeats * spb;
       for (let b = -COUNT_IN; b < Math.ceil(song.totalBeats); b++) engine.click(t0 + b * spb, b % 4 === 0);
@@ -193,6 +199,15 @@ export default function SongsMode({ piano, kind }) {
     else engine.droneStop();
   }
 
+  function toggleAmbient(on) {
+    setAmbient(on);
+    saveAmbient(on);
+    const r = run.current;
+    if (!r) return;
+    if (on) startAmbient(raga, r.base, r.song.sa, piano.transpose);
+    else engine.ambientStop();
+  }
+
   function quit() {
     stop();
     setPhase('pick');
@@ -202,6 +217,15 @@ export default function SongsMode({ piano, kind }) {
   const fall = phase === 'playing' && r
     ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={r.song.layout ?? 0} />
     : <FallSpace slot={piano.fallSlot} />;
+
+  const startStop = phase === 'playing'
+    ? <button className="big" onClick={quit}>■ Stop</button>
+    : <button className="primary big" onClick={begin}>▶ Start</button>;
+  // the same button again in the voice panel, so it is to hand at the top
+  const spare = piano.playSlot && createPortal(
+    <button className="voice-btn" onClick={phase === 'playing' ? quit : begin}>{phase === 'playing' ? 'Stop' : 'Start'}</button>,
+    piano.playSlot
+  );
 
   const progress = r ? Math.max(0, Math.min(1, r.play.beat / r.play.totalBeats)) : 0;
   const chordNow = r && song.chords
@@ -248,75 +272,35 @@ export default function SongsMode({ piano, kind }) {
   );
 
   return (
-    <div className="songs">
+    <div className={'songs' + (kind === 'carnatic' ? ' with-ragas' : '')}>
       {fall}
+      {spare}
       {bar}
-      <aside className="song-list">
-        {LEVELS[kind].map(level => (
-          <div key={level} className="unit">
-            {level === CARNATIC_LEVELS[0] && (
-              <div className="carnatic-head">
-                <div className="unit-title">Carnatic · {RAGAS[raga].number}. {RAGAS[raga].name}</div>
-                <RagaSelect raga={raga} disabled={phase === 'playing'} onPick={pickRaga} />
-              </div>
-            )}
-            <div className={'unit-title' + (CARNATIC_LEVELS.includes(level) ? ' sub' : '')}>{level}</div>
-            {level === 'My songs' && !mySongs.length && <div className="song-note">Import an audio file below</div>}
-            {allSongs.filter(s => s.level === level).map(s => (
-              <button
-                key={s.id}
-                className={'lesson-link' + (s.id === songId ? ' active' : '')}
-                disabled={phase === 'playing' || isLocked(s)}
-                onClick={() => pickSong(s)}
-              >
-                <span className="lesson-link-title">{s.title}</span>
-                <span className="lesson-link-stars">
-                  {isLocked(s) ? '🔒' : '★'.repeat(starsFor(best, s.id, mode))}
-                </span>
-              </button>
-            ))}
+      {kind === 'carnatic' && <RagaNav raga={raga} disabled={phase === 'playing'} onPick={pickRaga} />}
+      <SongList
+        levels={LEVELS[kind]}
+        songs={allSongs}
+        activeId={song.id}
+        disabled={phase === 'playing'}
+        isLocked={isLocked}
+        best={best}
+        mode={mode}
+        onPick={pickSong}
+        notes={kind === 'western' ? { 'My songs': 'Import an audio file below' } : {}}
+        head={kind === 'carnatic' && (
+          <div className="carnatic-head">
+            <div className="unit-title">Carnatic · {RAGAS[raga].number}. {RAGAS[raga].name}</div>
           </div>
-        ))}
+        )}
+      >
         {kind === 'western' && <ImportAudio disabled={phase === 'playing'} onImported={addMySong} />}
-      </aside>
+      </SongList>
 
       <div className="song-setup">
-        <div className="lesson-num">
-          {song.carnatic ? `Carnatic · ${RAGAS[raga].name} · ${song.talam.name} talam` : song.level} · {song.mine ? 'from your audio file' : `${song.bpm} BPM`}
-        </div>
-        <h2>{song.title}</h2>
-        {song.carnatic && (
+        {song.carnatic ? <CarnaticInfo song={song} raga={raga} layout={layout} /> : (
           <>
-            <div className="swara-map">
-              {[...SWARA_KEYS.map(sw => RAGAS[raga].semitones[sw]), 12].map(semis => [swaraName(semis), song.sa + semis]).map(([name, pitch]) => {
-                const semi = ((pitch % 12) + 12) % 12;
-                const rel = Math.floor(pitch / 12);
-                const k = keyAt(semi, rel, layout);
-                return (
-                  <span key={name} className={BLACK_SEMITONES.includes(semi) ? 'sharp' : ''}>
-                    <b>{name}</b>{rel > 0 ? 'high ' : rel < 0 ? 'low ' : ''}{k.note.replace('#', '♯')}<kbd>{k.key}</kbd>
-                  </span>
-                );
-              })}
-            </div>
-            <p className="song-note">
-              One swara per beat, {song.talam.beats} beats to a line (one round of {song.talam.name} talam).
-              Longer bars are a karvai: hold the swara. Get ★★ to open the next exercise; then try it faster.
-            </p>
-            {song.sa !== 0 && (
-              <p className="song-note">
-                Sa sits on {keyAt(((song.sa % 12) + 12) % 12, Math.floor(song.sa / 12), layout).note.replace('#', '♯')} for this
-                exercise (a different sruti), so every swara it needs is on your keyboard.
-              </p>
-            )}
-            {layout !== 0 && (
-              <p className="song-note">
-                {layout > 0
-                  ? <>The keys slide two places right for this exercise, so the low swaras (dot below) fit: <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> = low G A B, middle C is on <kbd>F</kbd>.</>
-                  : <>The keys slide two places left for this exercise, so the high swaras fit: <kbd>A</kbd> = D, up to high A on <kbd>Enter</kbd>.</>}
-                {' '}The piano below shows the new keys; it goes back to normal afterwards.
-              </p>
-            )}
+            <div className="lesson-num">{song.level} · {song.mine ? 'from your audio file' : `${song.bpm} BPM`}</div>
+            <h2>{song.title}</h2>
           </>
         )}
         {song.mine && (
@@ -333,6 +317,7 @@ export default function SongsMode({ piano, kind }) {
           </p>
         )}
 
+        {modeSwitch}
         {kind !== 'carnatic' && (
           <div className="song-option">
             <span className="option-label">Mode</span>
@@ -343,7 +328,7 @@ export default function SongsMode({ piano, kind }) {
             ))}
           </div>
         )}
-        <p className="song-note">{MODES[mode].hint}.</p>
+        {kind !== 'carnatic' && <p className="song-note">{MODES[mode].hint}.</p>}
 
         <div className="song-option">
           <span className="option-label">Speed</span>
@@ -355,7 +340,10 @@ export default function SongsMode({ piano, kind }) {
         </div>
 
         {song.carnatic && (
-          <TanpuraControl on={drone} onToggle={toggleDrone} />
+          <>
+            <TanpuraControl on={drone} onToggle={toggleDrone} />
+            <AmbientControl on={ambient} onToggle={toggleAmbient} />
+          </>
         )}
         {mode === 'play' && (
           <label className="unlock">
@@ -365,9 +353,7 @@ export default function SongsMode({ piano, kind }) {
         )}
 
         <p className="song-note">Long bars mean hold the key down until the bar has gone into the piano.</p>
-        {phase === 'playing'
-          ? <button className="big" onClick={quit}>■ Stop</button>
-          : <button className="primary big" onClick={begin}>▶ Start</button>}
+        {startStop}
 
         <div className="sheet-title">
           All notes in order <span>· {song.events.length} {song.chords ? 'chords' : 'notes'} · {song.talam?.beats ?? 8} beats per line{song.carnatic ? ` (one ${song.talam.name} talam cycle, ${song.talam.parts})` : ''}</span>

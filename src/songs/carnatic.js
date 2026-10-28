@@ -134,6 +134,12 @@ export const CARNATIC = [
   ...set(DHATU, 'dhatu', 'Dhatu Varisai', 'Dhatu Varisai'),
 ];
 export const CARNATIC_LEVELS = ['Sarali Varisai', 'Janta Varisai', 'Dhatu Varisai'];
+// Levels the app offers right now: Sarali in every raga first, Janta/Dhatu come back later.
+// Shankarabharanam already gets the full course (all Janta + Dhatu).
+export const SHOWN_LEVELS = ['Sarali Varisai'];
+export const FULL_COURSE_RAGAS = ['shankarabharanam'];
+export const shownSongs = (songs, raga) =>
+  FULL_COURSE_RAGAS.includes(raga) ? songs : songs.filter(s => SHOWN_LEVELS.includes(s.level));
 export const CARNATIC_BPM = 70;
 
 // "S R G ," → falling-notes events in the given raga, with Sa `sa` semitones from C
@@ -200,20 +206,62 @@ export function jantaFor(raga) {
   return all.filter(id => keep.has(id)); // back in the traditional order
 }
 
-// The exercises as songs in one raga; ids carry the raga so stars are kept per raga
+// An exercise as a song in one raga; ids carry the raga so stars are kept per raga
+function asSong(c, raga) {
+  const { sa, layout } = fitKeys(c.swaras, raga);
+  return {
+    ...c,
+    id: `${c.id}@${raga}`,
+    bpm: CARNATIC_BPM,
+    carnatic: true,
+    sa,
+    layout,
+    talam: TALAMS[c.talam],
+    ...parseSwaras(c.swaras, raga, sa),
+  };
+}
+
 export const carnaticSongs = raga => {
   const janta = new Set(jantaFor(raga));
-  return CARNATIC.filter(c => c.level !== 'Janta Varisai' || janta.has(c.id)).map(c => {
-    const { sa, layout } = fitKeys(c.swaras, raga);
-    return {
-      ...c,
-      id: `${c.id}@${raga}`,
-      bpm: CARNATIC_BPM,
-      carnatic: true,
-      sa,
-      layout,
-      talam: TALAMS[c.talam],
-      ...parseSwaras(c.swaras, raga, sa),
-    };
-  });
+  return CARNATIC.filter(c => c.level !== 'Janta Varisai' || janta.has(c.id)).map(c => asSong(c, raga));
 };
+
+// Geethams belong to one raga each, so they only show in that raga (Carnatic
+// Music tab only, not Relax). Sree Govinda (Purandara Dasa), notation from
+// Shanmukhapriya School of Music; one line = one Matya talam cycle (4 | 2 | 4).
+// Line 4 ends on upper Sa (the sheet prints a plain S; museyb.blogspot.com has Ṡ).
+const GEETHAMS = [
+  {
+    id: 'geetham-sree-govinda',
+    title: 'Sree Govinda',
+    level: 'Geetham',
+    raga: 'shankarabharanam',
+    talam: 'matya',
+    swaras: [
+      "S' , S' N | D N | S' N D P",   // shree gō – vin – da
+      'M G M P | D P | M G R S',      // harē madhu sūdana
+      'S S P , | M G | M R G ,',      // vanamālā
+      "S S S' , | S' S' | D N , S'",  // garuda dwaja mukunda
+      "G' R' S' N | D N | S' N D P",  // shreedhara shree raghupathe
+      "S' , , , | , , | S' N D P",    // san – karshana
+      'M G M P | , P | M G R S',      // sundarānga jaya jaya
+      "G' R' N S' | , D | N N P D",   // shree rāma seethā –
+      'D M P , | P M | G R G ,',      // – bhirāma
+      "S R G M | P , | D N S' ,",     // māmpāhi
+      "G' R' S' N | D P | M G R S",   // pattābhirāma
+    ].join(' || '),
+  },
+];
+export const GEETHAM_LEVEL = 'Geetham';
+
+// The exercise last picked in Relax or Practice (id without the raga), so
+// switching between the two keeps the same varisai selected
+const PICK_KEY = 'desk-piano-carnatic-pick';
+export function loadCarnaticPick() {
+  try { return localStorage.getItem(PICK_KEY); } catch { return null; }
+}
+export function saveCarnaticPick(id) {
+  try { localStorage.setItem(PICK_KEY, id.split('@')[0]); } catch { /* storage blocked */ }
+}
+
+export const geethamSongs = raga => GEETHAMS.filter(g => g.raga === raga).map(g => asSong(g, raga));

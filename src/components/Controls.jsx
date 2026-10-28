@@ -8,20 +8,20 @@ function Slider({ label, value, onChange }) {
   );
 }
 
-function Stepper({ label, hint, value, display, onStep }) {
+function Stepper({ label, hint, value, display, onStep, disabled = false }) {
   return (
-    <div className="stepper">
+    <div className={'stepper' + (disabled ? ' disabled' : '')}>
       <span>{label} {hint}</span>
       <div className="stepper-row">
-        <button onClick={() => onStep(-1)}>−</button>
+        <button disabled={disabled} onClick={() => onStep(-1)}>−</button>
         <span className="stepper-val">{display ?? value}</span>
-        <button onClick={() => onStep(1)}>+</button>
+        <button disabled={disabled} onClick={() => onStep(1)}>+</button>
       </div>
     </div>
   );
 }
 
-export default function Controls({ effects, onEffect, octave, onOctave, transpose, onTranspose, pedalLatched, sustainOn, onPedal }) {
+export default function Controls({ effects, onEffect, octave, onOctave, transpose, onTranspose, transposeDisabled, pedalLatched, sustainOn, onPedal }) {
   return (
     <div className="panel controls">
       <div className="panel-title">Effects</div>
@@ -36,6 +36,7 @@ export default function Controls({ effects, onEffect, octave, onOctave, transpos
           value={transpose}
           display={transpose > 0 ? `+${transpose}` : transpose}
           onStep={onTranspose}
+          disabled={transposeDisabled}
         />
       </div>
       <button className={'pedal' + (sustainOn ? ' on' : '')} onClick={onPedal}>

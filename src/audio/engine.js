@@ -6,8 +6,9 @@ import { pluckSamples } from './pluck.js';
 //   voices → bus ─┬─────────────────────────→ master → compressor → speakers
 //                 ├→ chorus delay (LFO) → wet ┘
 //                 └→ reverb convolver  → wet ┘
+//   dreamy voices also → dream send → long convolver → master
 let ctx = null;
-let bus, master, chorusWet, reverbWet;
+let bus, master, chorusWet, reverbWet, dreamIn;
 const settings = { volume: 0.7, reverb: 0.25, chorus: 0 };
 
 const voices = new VoiceManager(startVoice, stopVoice);
@@ -42,6 +43,16 @@ function ensure() {
   reverbWet = ctx.createGain();
   bus.connect(convolver).connect(reverbWet).connect(master);
 
+  // A long, soft wash for the dream pop voices (their `space` send)
+  const dream = ctx.createConvolver();
+  dream.buffer = makeImpulse(5);
+  const dreamTone = ctx.createBiquadFilter();
+  dreamTone.type = 'lowpass';
+  dreamTone.frequency.value = 4500;
+  dreamIn = ctx.createGain();
+  dreamIn.gain.value = 0.7;
+  dreamIn.connect(dream).connect(dreamTone).connect(master);
+
   applySettings();
 }
 
@@ -66,6 +77,24 @@ function applySettings() {
   chorusWet.gain.setTargetAtTime(settings.chorus, now, 0.02);
 }
 
+// Soft-clipping curves for fuzz voices, one per drive amount
+const fuzzCurves = new Map();
+function fuzzCurve(drive) {
+  if (!fuzzCurves.has(drive)) {
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < curve.length; i++) {
+      const x = (i / (curve.length - 1)) * 2 - 1;
+      curve[i] = Math.tanh(drive * x) / Math.tanh(drive);
+    }
+    fuzzCurves.set(drive, curve);
+  }
+  return fuzzCurves.get(drive);
+}
+
+// The last note each gliding voice played, so the next one can slide from it
+const GLIDE_WITHIN = 1.5; // seconds: a longer pause starts fresh, no slide
+const lastGlide = new Map();
+
 function startVoice(freq, instrumentId, now = ctx.currentTime) {
   const inst = instrumentById[instrumentId];
   if (inst.pluck) return startPluck(freq, inst, now);
@@ -87,7 +116,43 @@ function startVoice(freq, instrumentId, now = ctx.currentTime) {
   filter.frequency.exponentialRampToValueAtTime(Math.min(Math.max(freq * f.to, 300), 18000), now + f.time);
   filter.connect(out);
 
+  // partials go through the fuzz first, when the voice has one
+  let into = filter;
+  if (inst.drive) {
+    const shaper = ctx.createWaveShaper();
+    shaper.curve = fuzzCurve(inst.drive);
+    shaper.oversample = '4x';
+    shaper.connect(filter);
+    into = shaper;
+  }
+  let glideFrom = null;
+  if (inst.glide) {
+    const last = lastGlide.get(instrumentId);
+    if (last && now - last.at < GLIDE_WITHIN && last.freq !== freq) glideFrom = last.freq;
+    lastGlide.set(instrumentId, { freq, at: now });
+  }
+
   const sources = [];
+  if (inst.phaser) {
+    // Four all-pass stages swept by a slow LFO, mixed back with the dry sound
+    // so the notches move: the classic phaser swirl
+    const lfo = ctx.createOscillator();
+    const sweep = ctx.createGain();
+    lfo.frequency.value = inst.phaser.rate;
+    sweep.gain.value = 900 * inst.phaser.depth;
+    lfo.connect(sweep);
+    let node = filter;
+    for (let i = 0; i < 4; i++) {
+      const ap = ctx.createBiquadFilter();
+      ap.type = 'allpass';
+      ap.frequency.value = 1000;
+      ap.Q.value = 0.6;
+      sweep.connect(ap.frequency);
+      node = node.connect(ap);
+    }
+    node.connect(out);
+    sources.push(lfo);
+  }
   let dest = bus;
   if (inst.tremolo) {
     // Separate gain stage so the wobble never outlives the envelope
@@ -103,6 +168,11 @@ function startVoice(freq, instrumentId, now = ctx.currentTime) {
     sources.push(lfo);
   }
   out.connect(dest);
+  if (inst.space) {
+    const send = ctx.createGain();
+    send.gain.value = inst.space;
+    out.connect(send).connect(dreamIn);
+  }
 
   let vibratoDepth = null;
   if (inst.vibrato) {
@@ -118,12 +188,15 @@ function startVoice(freq, instrumentId, now = ctx.currentTime) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
     osc.type = p.type ?? 'sine';
-    osc.frequency.value = freq * p.ratio;
+    if (glideFrom) {
+      osc.frequency.setValueAtTime(glideFrom * p.ratio, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * p.ratio, now + inst.glide);
+    } else osc.frequency.value = freq * p.ratio;
     osc.detune.value = p.detune ?? 0;
     if (vibratoDepth) vibratoDepth.connect(osc.detune);
     g.gain.setValueAtTime(p.gain, now);
     if (p.fade) g.gain.exponentialRampToValueAtTime(0.0001, now + p.fade);
-    osc.connect(g).connect(filter);
+    osc.connect(g).connect(into);
     sources.push(osc);
   }
 
@@ -248,6 +321,39 @@ function pluck(freq, when) {
   }
 }
 
+// Ambient pad: slow chords, each swelling in over a few seconds and fading out
+// under the next one. Soft triangle tones through a low-pass, into the reverb.
+const CHORD_LEN = 9; // seconds each chord leads
+const CHORD_FADE = 4; // seconds of swell in and of overlap with the next chord
+let ambientTimer = null;
+let ambientNext = 0;
+let ambientGain = null;
+let ambientArgs = null; // the running pad, restarted after a rebuild
+
+function padChord(freqs, when) {
+  const end = when + CHORD_LEN + CHORD_FADE;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.linearRampToValueAtTime(1 / freqs.length, when + CHORD_FADE);
+  g.gain.setValueAtTime(1 / freqs.length, when + CHORD_LEN);
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 900;
+  filter.connect(g).connect(ambientGain);
+  for (const freq of freqs) {
+    for (const detune of [-6, 6]) {
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      osc.detune.value = detune;
+      osc.connect(filter);
+      osc.start(when);
+      osc.stop(end + 0.1);
+    }
+  }
+}
+
 function wake() {
   ensure();
   if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => { /* needs a click first */ });
@@ -324,12 +430,17 @@ function rebuild() {
   clearInterval(droneTimer);
   droneTimer = null;
   droneGain = null;
+  clearInterval(ambientTimer);
+  ambientTimer = null;
+  ambientGain = null;
   pluckCache.clear(); // buffers belong to the old sample rate
+  lastGlide.clear(); // its times are on the old clock
   ctx = null;
   stuckSince = null;
   old.close().catch(() => { /* already gone */ });
   ensure();
   if (droneArgs) engine.droneStart(...droneArgs);
+  if (ambientArgs) engine.ambientStart(...ambientArgs);
   for (const fn of restartListeners) fn();
 }
 
@@ -402,6 +513,40 @@ export const engine = {
       g.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
       setTimeout(() => g.disconnect(), 2000);
       droneGain = null;
+    }
+  },
+  // chords: a list of chords (each a list of frequencies), played in turn and looped
+  ambientStart(chords, volume = 0.5) {
+    wake();
+    this.ambientStop();
+    ambientArgs = [chords, volume];
+    ambientGain = ctx.createGain();
+    ambientGain.gain.value = 0.12 * volume;
+    ambientGain.connect(bus);
+    ambientNext = ctx.currentTime + 0.1;
+    let i = 0;
+    const schedule = () => {
+      while (ambientNext < ctx.currentTime + 2) {
+        padChord(chords[i++ % chords.length], ambientNext);
+        ambientNext += CHORD_LEN;
+      }
+    };
+    schedule();
+    ambientTimer = setInterval(schedule, 500);
+  },
+  ambientVolume(volume) {
+    if (ambientArgs) ambientArgs[1] = volume;
+    if (ambientGain) ambientGain.gain.setTargetAtTime(0.12 * volume, ctx.currentTime, 0.1);
+  },
+  ambientStop() {
+    ambientArgs = null;
+    clearInterval(ambientTimer);
+    ambientTimer = null;
+    if (ambientGain) {
+      const g = ambientGain;
+      g.gain.setTargetAtTime(0, ctx.currentTime, 0.5);
+      setTimeout(() => g.disconnect(), 3000);
+      ambientGain = null;
     }
   },
   // Audio status for the display: 'off' | 'running' | 'suspended' | 'stuck'

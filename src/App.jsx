@@ -17,12 +17,16 @@ import { SIZE_MODES, loadSizeMode, saveSizeMode } from './data/pianoSize.js';
 const AUDIO_MESSAGES = { suspended: 'SOUND PAUSED - CLICK ANYWHERE', stuck: 'SOUND STUCK - RESTARTING' };
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+// Transpose is switched off for now (user's call): the control stays visible but
+// greyed out, the arrows do nothing and everything plays at 0. Set true to bring it back.
+const TRANSPOSE_ENABLED = false;
+
 export default function App() {
   const [voiceIndex, setVoiceIndex] = useState(0);
   const [octave, setOctave] = useState(4);
   const [storedTranspose, setTranspose] = useState(0);
   const [transposeLocks, setTransposeLocks] = useState(0);
-  const transpose = effectiveTranspose(storedTranspose, transposeLocks);
+  const transpose = TRANSPOSE_ENABLED ? effectiveTranspose(storedTranspose, transposeLocks) : 0;
   const [effects, setEffects] = useState({ volume: 0.7, reverb: 0.25, chorus: 0 });
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [pedalLatched, setPedalLatched] = useState(false);
@@ -32,6 +36,7 @@ export default function App() {
   const [lessonStatus, setLessonStatus] = useState(null);
   const [lessonSlot, setLessonSlot] = useState(null); // element under the piano where exercises render
   const [fallSlot, setFallSlot] = useState(null); // element above the piano where song notes fall
+  const [playSlot, setPlaySlot] = useState(null); // spot in the voice panel for a spare Start/Stop button
   const [layout, setLayout] = useState(0); // keyboard layout shift: 0, +2 (low notes) or -2 (high), see keymap.js
   const [audioStatus, setAudioStatus] = useState(() => engine.status());
   const [colourMode, setColourMode] = useState(loadColourMode);
@@ -96,7 +101,7 @@ export default function App() {
 
   const shiftOctave = d => setOctave(o => clamp(o + d, MIN_OCTAVE, MAX_OCTAVE));
   const shiftTranspose = d => {
-    if (transposeLocks === 0) setTranspose(t => clamp(t + d, -MAX_TRANSPOSE, MAX_TRANSPOSE));
+    if (TRANSPOSE_ENABLED && transposeLocks === 0) setTranspose(t => clamp(t + d, -MAX_TRANSPOSE, MAX_TRANSPOSE));
   };
 
   // Returns the unlock function, so it can be an effect's cleanup
@@ -125,6 +130,7 @@ export default function App() {
     setStatus: setLessonStatus,
     slot: lessonSlot,
     fallSlot,
+    playSlot,
     setLayout,
     // keys held right now, as { semitone, octave }
     getHeld: () => [...heldRef.current.values()],
@@ -149,7 +155,7 @@ export default function App() {
         </header>
 
         <div className="panels">
-          <VoicePanel voiceIndex={voiceIndex} onSelect={setVoiceIndex} />
+          <VoicePanel voiceIndex={voiceIndex} onSelect={setVoiceIndex} playSlotRef={setPlaySlot} />
           <Controls
             effects={effects}
             onEffect={(name, value) => setEffects(e => ({ ...e, [name]: value }))}
@@ -157,6 +163,7 @@ export default function App() {
             onOctave={shiftOctave}
             transpose={transpose}
             onTranspose={shiftTranspose}
+            transposeDisabled={!TRANSPOSE_ENABLED}
             pedalLatched={pedalLatched}
             sustainOn={sustainOn}
             onPedal={() => setPedalLatched(l => !l)}

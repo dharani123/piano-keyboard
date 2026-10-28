@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSwaras, carnaticSongs, jantaFor, CARNATIC, CARNATIC_LEVELS, RAGAS, HOME_RAGAS } from './carnatic.js';
+import { parseSwaras, carnaticSongs, jantaFor, CARNATIC, CARNATIC_LEVELS, RAGAS, HOME_RAGAS, geethamSongs } from './carnatic.js';
 import { keyAt } from '../data/keymap.js';
 
 const line = song => song.events.map(e => e.notes[0].swara + (e.beats > 1 ? `/${e.beats}` : '')).join(' ');
@@ -91,5 +91,16 @@ describe('exercises', () => {
     }
     expect(picks.size).toBeGreaterThan(30); // ragas don't all get the same six
     expect(carnaticSongs('kalyani').filter(s => s.level !== 'Janta Varisai')).toHaveLength(14 + 3);
+  });
+});
+
+describe('geethams', () => {
+  it('Sree Govinda is only in Shankarabharanam, in whole Matya cycles, on the keyboard', () => {
+    const [g] = geethamSongs('shankarabharanam');
+    expect(g.title).toBe('Sree Govinda');
+    expect(g.totalBeats).toBe(11 * 10);
+    expect(g.sa).toBe(0);
+    expect(g.layout).toBe(0);
+    expect(geethamSongs('mayamalavagowla')).toEqual([]);
   });
 });

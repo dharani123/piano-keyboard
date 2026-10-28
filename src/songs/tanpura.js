@@ -22,6 +22,10 @@ export function saveTanpuraVolume(v) {
   try { localStorage.setItem(VOLUME_KEY, String(v)); } catch { /* storage blocked */ }
 }
 
+// Every page load starts with the tanpura on at 50%; changes last until reload
+saveTanpura(true);
+saveTanpuraVolume(0.5);
+
 // Tanpura on an exercise's Sa: Pa, Sa, Sa, low Sa
 export function startTanpura(octave, sa, transpose) {
   const f = semi => frequency(octave, sa + semi, transpose);

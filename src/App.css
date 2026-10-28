@@ -115,6 +115,11 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 .voices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .voice-btn { display: flex; align-items: center; gap: 8px; text-align: left; font-size: 13px; }
 .voice-num { color: var(--muted); font-family: ui-monospace, monospace; }
+/* spare Start/Stop for the open song, on its own row under the voices; styled like a voice */
+.voice-panel { display: flex; flex-direction: column; }
+.voice-panel .voices { flex: 1; }
+.play-slot { display: contents; }
+.play-slot .voice-btn { grid-column: 1 / -1; justify-content: center; }
 .led { width: 8px; height: 8px; border-radius: 50%; background: #3a2a10; flex-shrink: 0; }
 .voice-btn.active { border-color: var(--accent); }
 .voice-btn.active .led { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
@@ -128,6 +133,8 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 .stepper-row { display: flex; align-items: center; gap: 8px; }
 .stepper-row button { width: 32px; padding: 4px 0; }
 .stepper-val { min-width: 28px; text-align: center; font-family: ui-monospace, monospace; font-size: 16px; }
+.stepper.disabled { opacity: .4; }
+.stepper.disabled button { cursor: not-allowed; }
 .pedal { margin-top: 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .pedal small { color: var(--muted); font-size: 11px; }
 .pedal.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
@@ -388,7 +395,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .fall {
   position: relative;
   overflow: hidden;
-  margin-bottom: -16px;
+  margin-bottom: -24px; /* the column gap + the piano's top padding: notes land exactly on the key tops */
   border-bottom: 1px solid #3a3d46;
   background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .02));
 }
@@ -431,7 +438,33 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .import-error { color: #c98a86; }
 button.link.inline { display: inline; padding: 0; font-size: 13px; text-decoration: underline; }
 .carnatic-head { margin-top: 10px; padding-top: 8px; border-top: 1px solid #2a2c33; }
-.raga-pick { max-width: 100%; margin: 2px 0 6px; background: #15161a; color: var(--text); border: 1px solid #3a3d46; border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+/* Raga nav: sits in the empty page space left of the instrument when the window
+   is wide enough; otherwise it squeezes in as a third column */
+.raga-nav { width: 190px; box-sizing: border-box; }
+@media (min-width: 1420px) {
+  .songs.with-ragas { position: relative; }
+  .raga-nav {
+    position: absolute; top: 0; right: calc(100% + var(--raga-nav-gap, 24px)); width: 210px;
+    background: var(--panel); border: 1px solid #2a2c33; border-radius: 10px; padding: 12px 10px;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .04);
+  }
+}
+@media (max-width: 1419px) {
+  .songs.with-ragas { grid-template-columns: 190px 250px 1fr; }
+  .raga-nav { border-right: 1px solid #2a2c33; padding-right: 12px; }
+}
+.raga-nav .unit-title { margin-top: 10px; }
+.raga-nav > div:first-child .unit-title { margin-top: 0; }
+.chakra-head { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: none; border-radius: 6px; padding: 5px 6px; color: var(--muted); font-size: 13px; text-align: left; cursor: pointer; }
+.chakra-head:hover { background: #23252c; color: var(--text); }
+.chakra.current .chakra-head { color: var(--text); font-weight: 600; }
+.chakra-arrow { width: 10px; font-size: 10px; }
+.chakra-range { margin-left: auto; font-size: 11px; color: #555963; font-weight: 400; }
+.chakra.open { margin-bottom: 4px; }
+.raga-link { padding-left: 14px; gap: 4px; }
+.raga-link .lesson-link-num { width: 20px; }
+.raga-link .lesson-link-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.raga-basic { margin-left: auto; font-size: 9px; color: var(--muted); }
 .unit-title.sub { color: var(--muted); font-weight: 600; }
 .swara-map { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
 .swara-map span { display: flex; align-items: center; gap: 4px; padding: 3px 7px; border: 1px solid #3a3d46; border-radius: 6px; font-size: 12px; color: var(--muted); }
@@ -454,8 +487,6 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .song-list > .unit:first-child .carnatic-head { margin-top: 0; padding-top: 0; border-top: none; }
 
 /* ---- carnatic relax ---- */
-.relax { padding: 16px 20px; max-width: 760px; }
-.relax h2 { margin: 0 0 6px; }
 .relax-journey { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; flex-wrap: wrap; }
 .relax-journey .option-label { width: 52px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
 .relax-journey select { background: #15161a; color: var(--text); border: 1px solid #3a3d46; border-radius: 6px; padding: 4px 8px; }

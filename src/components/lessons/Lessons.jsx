@@ -6,6 +6,8 @@ import EarGym from '../ear/EarGym.jsx';
 import SongsMode from '../songs/SongsMode.jsx';
 import RelaxMode from '../songs/RelaxMode.jsx';
 
+const CARNATIC_MODE_KEY = 'desk-piano-carnatic-mode';
+
 export default function Lessons({ piano }) {
   const [progress, setProgress] = useState(loadProgress);
   const isUnlocked = i => progress.unlockAll || i === 0 || hasPassed(progress, LESSONS[i - 1].id);
@@ -14,7 +16,15 @@ export default function Lessons({ piano }) {
     return next === -1 ? 0 : next;
   });
   const lesson = LESSONS[selected];
-  const [tab, setTab] = useState('relax');
+  const [tab, setTab] = useState('carnatic');
+  // The Carnatic tab has two ways in: Relax (no scores) or Practice (stars, locks)
+  const [carnaticMode, setCarnaticMode] = useState(() => {
+    try { return localStorage.getItem(CARNATIC_MODE_KEY) === 'practice' ? 'practice' : 'relax'; } catch { return 'relax'; }
+  });
+  function pickCarnaticMode(mode) {
+    setCarnaticMode(mode);
+    try { localStorage.setItem(CARNATIC_MODE_KEY, mode); } catch { /* storage blocked */ }
+  }
   const gymOpen = progress.unlockAll || hasPassed(progress, 'ear-quick');
 
   function update(next) {
@@ -27,13 +37,24 @@ export default function Lessons({ piano }) {
     update({ ...progress, stars: { ...progress.stars, [lesson.id]: best } });
   }
 
+  // Shown by Relax and Practice among their own settings
+  const modeSwitch = (
+    <div className="song-option">
+      <span className="option-label">Mode</span>
+      {[['relax', 'Relax 🌿'], ['practice', 'Practice ★']].map(([mode, label]) => (
+        <button key={mode} className={carnaticMode === mode ? 'active' : ''} onClick={() => pickCarnaticMode(mode)}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   const done = LESSONS.filter(l => hasPassed(progress, l.id)).length;
 
   return (
     <div className="panel learn">
       <div className="learn-tabs">
-        <button className={tab === 'relax' ? 'active' : ''} onClick={() => setTab('relax')}>Carnatic Relax 🌿</button>
-        <button className={tab === 'carnatic' ? 'active' : ''} onClick={() => setTab('carnatic')}>Carnatic Music 🪕</button>
+        <button className={tab === 'carnatic' ? 'active' : ''} onClick={() => setTab('carnatic')}>Carnatic 🪕</button>
         <button className={tab === 'lessons' ? 'active' : ''} onClick={() => setTab('lessons')}>Lessons</button>
         <button
           className={tab === 'gym' ? 'active' : ''}
@@ -46,7 +67,7 @@ export default function Lessons({ piano }) {
         <button className={tab === 'western' ? 'active' : ''} onClick={() => setTab('western')}>Western Music 🎵</button>
         {!gymOpen && <span className="learn-tabs-note">Pass Ear training to open</span>}
       </div>
-      {tab === 'relax' ? <RelaxMode piano={piano} /> : tab === 'western' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} /> : tab === 'gym' && gymOpen ? <EarGym piano={piano} /> : (
+      {tab === 'carnatic' && carnaticMode === 'relax' ? <RelaxMode piano={piano} modeSwitch={modeSwitch} /> : tab === 'western' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} modeSwitch={tab === 'carnatic' ? modeSwitch : null} /> : tab === 'gym' && gymOpen ? <EarGym piano={piano} /> : (
       <div className="lessons">
         <aside className="course">
           <div className="panel-title">Lessons · {done}/{LESSONS.length} passed</div>

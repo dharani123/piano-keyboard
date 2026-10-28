@@ -2,38 +2,49 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { engine } from '../../audio/engine.js';
 import { frequency } from '../../audio/pitch.js';
-import { RAGAS, DEFAULT_RAGA, CARNATIC_BPM, carnaticSongs } from '../../songs/carnatic.js';
+import { RAGAS, DEFAULT_RAGA, CARNATIC_BPM, CARNATIC_LEVELS, GEETHAM_LEVEL, carnaticSongs, shownSongs, geethamSongs, loadCarnaticPick, saveCarnaticPick } from '../../songs/carnatic.js';
 import { loadTanpura, saveTanpura, startTanpura } from '../../songs/tanpura.js';
 import { journeyLines, playAlongPlan, appNotes, segmentAt, loadRelaxPos, saveRelaxPos } from '../../songs/relax.js';
 import { createPlay, press, advance, pitchKey } from '../../songs/player.js';
-import { markRelaxFinished } from '../../songs/best.js';
+import { markRelaxFinished, loadBest } from '../../songs/best.js';
+import NoteSheet from './NoteSheet.jsx';
+import { SongList, CarnaticInfo, CARNATIC_SPEEDS, speedLabel } from './CarnaticParts.jsx';
 import TanpuraControl from './TanpuraControl.jsx';
-import RagaSelect from './RagaSelect.jsx';
+import AmbientControl from './AmbientControl.jsx';
+import { loadAmbient, saveAmbient, startAmbient } from '../../songs/ambient.js';
+import RagaNav from './RagaNav.jsx';
 import FallingNotes, { FallSpace, FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 
-const SPEEDS = [0.5, 0.75, 1];
 const RAGA_KEY = 'desk-piano-raga';
-const BREATHER = 20; // seconds of break between exercises, counted down on screen
+const VIEW_MARGIN = 20; // px left below the Relax card when Carry on scrolls to it
+const BREATHER = 15; // seconds of break between exercises, counted down on screen
 const LOOKAHEAD = 1.5; // seconds of the app's notes created ahead of time
 const FEED_EVERY = 200; // ms between topping up (hidden tabs slow this to ~1 s, still inside the lookahead)
 
 // No scores, no locks, no red keys: every varisai in order, flowing at a
 // steady tempo over a tanpura drone, each line heard first (optional) and
 // echoed straight back.
-export default function RelaxMode({ piano }) {
+export default function RelaxMode({ piano, modeSwitch }) {
   const [raga, setRaga] = useState(() => {
     try { return RAGAS[localStorage.getItem(RAGA_KEY)] ? localStorage.getItem(RAGA_KEY) : DEFAULT_RAGA; } catch { return DEFAULT_RAGA; }
   });
-  const lines = useMemo(() => journeyLines(carnaticSongs(raga)), [raga]);
-  const exercises = useMemo(() => lines.filter(l => l.line === 0), [lines]);
+  const songs = useMemo(() => [...shownSongs(carnaticSongs(raga), raga), ...geethamSongs(raga)], [raga]);
+  const lines = useMemo(() => journeyLines(songs), [songs]);
   // after a reload, start again from the first line of the varisai you were in
+  // (or at the varisai last picked in Practice)
   const [pos, setPos] = useState(() => {
+    const pick = loadCarnaticPick();
+    const picked = lines.findIndex(l => l.line === 0 && l.id.split('@')[0] === pick);
+    if (picked >= 0) return picked;
     const p = Math.min(loadRelaxPos(), lines.length - 1);
     return p - lines[p].line;
   });
-  const [speed, setSpeed] = useState(0.75);
+  const [speed, setSpeed] = useState(0.75); // Relax starts at 75%
+  const [best, setBest] = useState(loadBest); // stars shown in the varisai list
   const [drone, setDrone] = useState(loadTanpura);
   const droneOn = useRef(drone); // read by tuneDrone mid-run
+  const [ambient, setAmbient] = useState(loadAmbient);
+  const ambientOn = useRef(ambient);
   const [listenFirst, setListenFirst] = useState(true);
   const [step, setStep] = useState('idle'); // idle | listen | play | rest
   const [restLeft, setRestLeft] = useState(0); // seconds left in the break
@@ -45,9 +56,12 @@ export default function RelaxMode({ piano }) {
   const feeder = useRef(0); // interval that schedules the app's notes just ahead
   const lit = useRef('');
   const droneSa = useRef(null); // the Sa the drone is sounding, null when off
+  const ambientSa = useRef(null); // the Sa the ambient pad is built on, null when off
   const pianoRef = useRef(piano);
   pianoRef.current = piano;
   const line = lines[pos];
+  // whatever Relax shows is what Practice opens on, and the other way round
+  useEffect(() => { saveCarnaticPick(line.id); }, [line.id]);
   // an exercise that needs notes off the home row slides the keys two places for the whole exercise
   const layout = line.layout;
   useEffect(() => { piano.setLayout(layout); }, [layout]);
@@ -82,6 +96,8 @@ export default function RelaxMode({ piano }) {
     halt();
     engine.droneStop();
     droneSa.current = null;
+    engine.ambientStop();
+    ambientSa.current = null;
     setStep('idle');
     pianoRef.current.setStatus(null);
   }
@@ -101,7 +117,11 @@ export default function RelaxMode({ piano }) {
   function start() {
     const base = piano.octave;
     piano.setStatus(RAGAS[raga].name.slice(0, 14).toUpperCase());
-    requestAnimationFrame(() => piano.fallSlot?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    // settle the view on the fall area, piano and the Relax card under it, the card's bottom near the bottom of the screen
+    requestAnimationFrame(() => {
+      const card = piano.slot;
+      if (card) window.scrollTo({ top: window.scrollY + card.getBoundingClientRect().bottom + VIEW_MARGIN - window.innerHeight, behavior: 'smooth' });
+    });
     playLine(pos, base);
   }
 
@@ -124,10 +144,30 @@ export default function RelaxMode({ piano }) {
     }
   }
 
+  // Ambient music keeps flowing across lines and breaks; it only restarts if Sa moves
+  function tuneAmbient(base, sa) {
+    if (!ambientOn.current || ambientSa.current === sa) return;
+    startAmbient(raga, base, sa, pianoRef.current.transpose);
+    ambientSa.current = sa;
+  }
+
+  function toggleAmbient(on) {
+    setAmbient(on);
+    saveAmbient(on);
+    ambientOn.current = on;
+    if (!on) {
+      engine.ambientStop();
+      ambientSa.current = null;
+    } else if (step !== 'idle') {
+      tuneAmbient(run.current?.base ?? piano.octave, line.sa);
+    }
+  }
+
   function playLine(p, base) {
     halt();
     const l = lines[p];
     tuneDrone(base, l.sa);
+    tuneAmbient(base, l.sa);
     const spb = 60 / (CARNATIC_BPM * speed);
     playAlong(p, base, spb);
   }
@@ -177,15 +217,16 @@ export default function RelaxMode({ piano }) {
         light(down ? l.events[i].notes.map(n => codeFor(n.semitone, n.oct, l.layout)) : [], true);
       } else {
         setSounding(-1);
-        const next = r.play.notes.filter(n => !n.hit && !n.missed && n.beat - r.play.beat <= 0.5);
+        const next = r.play.notes.filter(n => !n.hit && !n.missed && n.beat <= r.play.beat);
         light(next.map(n => codeFor(n.semitone, n.octave - r.base, lines[p].layout)));
       }
       setFrame(f => f + 1);
       if (r.play.done) {
-        // played to the end of the exercise: it counts as passed in Carnatic Music too
+        // played to the end of the exercise: it counts as passed in Practice too
         light([]);
         setStep('rest');
         markRelaxFinished(lines[plan.segments.at(-1).pos].id);
+        setBest(loadBest());
         // a short breather, then straight on to the next varisai
         const np = goTo(plan.segments.at(-1).pos + 1);
         const restEnd = Date.now() + BREATHER * 1000;
@@ -218,6 +259,15 @@ export default function RelaxMode({ piano }) {
   const fall = (step === 'play' || step === 'listen') && r?.play
     ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle listen={r.listenNotes} />
     : <FallSpace slot={piano.fallSlot} />;
+
+  const startStop = active
+    ? <button className="big" onClick={stop}>■ Stop</button>
+    : <button className="primary big" onClick={start}>▶ Start</button>;
+  // the same button again in the voice panel, so it is to hand at the top
+  const spare = piano.playSlot && createPortal(
+    <button className="voice-btn" onClick={active ? stop : start}>{active ? 'Stop' : 'Start'}</button>,
+    piano.playSlot
+  );
 
   // The current line as swaras, the sounding one lit while listening
   const lineView = (
@@ -256,51 +306,57 @@ export default function RelaxMode({ piano }) {
   );
 
   const exerciseNow = line.exercise;
+  // Same layout as Practice: the varisais on the left, the exercise on the right
   return (
-    <div className="relax">
+    <div className="songs relax with-ragas">
       {fall}
+      {spare}
       {card}
-      <h2>Relax &amp; play 🌿</h2>
-      <p className="song-note">
-        All the varisais in Purandara Dasa&apos;s order, one line at a time. No scores, no locks: listen, play it back,
-        and let your ear soak in each swara against the tanpura. You carry on from where you left off.
-      </p>
+      <RagaNav raga={raga} disabled={active} onPick={pickRaga} />
+      <SongList
+        levels={[...CARNATIC_LEVELS, GEETHAM_LEVEL]}
+        songs={songs}
+        activeId={songs[exerciseNow].id}
+        disabled={active}
+        best={best}
+        mode="play"
+        onPick={s => goTo(lines.findIndex(l => l.id === s.id))}
+        head={(
+          <div className="carnatic-head">
+            <div className="unit-title">Carnatic · {RAGAS[raga].number}. {RAGAS[raga].name}</div>
+          </div>
+        )}
+      />
 
-      <div className="song-option">
-        <span className="option-label">Raga</span>
-        <RagaSelect raga={raga} disabled={active} onPick={pickRaga} />
-      </div>
-      <p className="song-note">The varisai keeps flowing at a steady tempo; missed swaras just drift past{listenFirst ? ': the app plays a line, you echo it straight back, in rhythm' : ''}.</p>
-      <div className="song-option">
-        <span className="option-label">Speed</span>
-        {SPEEDS.map(v => (
-          <button key={v} className={speed === v ? 'active' : ''} disabled={active} onClick={() => setSpeed(v)}>
-            {v === 1 ? '1st speed' : `${Math.round(v * 100)}%`}
-          </button>
-        ))}
-      </div>
-      <TanpuraControl on={drone} onToggle={toggleDrone} />
-      <label className="unlock">
-        <input type="checkbox" checked={listenFirst} disabled={active} onChange={e => setListenFirst(e.target.checked)} />
-        Listen to each line first, then play it back
-      </label>
+      <div className="song-setup">
+        <CarnaticInfo song={songs[exerciseNow]} raga={raga} layout={layout} />
 
-      <div className="relax-journey">
-        <span className="option-label">Journey</span>
-        <select value={exerciseNow} disabled={active} onChange={e => goTo(exercises[Number(e.target.value)] ? lines.indexOf(exercises[Number(e.target.value)]) : 0)}>
-          {exercises.map((x, i) => <option key={i} value={i}>{x.title}</option>)}
-        </select>
-        <span className="song-note">exercise {exerciseNow + 1} of {exercises.length} · line {line.line + 1} of {line.lines}</span>
-      </div>
-      <div className="progress"><div className="progress-bar" style={{ width: `${((pos + 1) / lines.length) * 100}%` }} /></div>
+        {modeSwitch}
 
-      {!active && (
-        <>
-          <div className="sheet-title">Up next</div>
-          {lineView}
-          <button className="primary big" onClick={start}>▶ {pos === 0 ? 'Begin' : 'Carry on'}</button>
-        </>
-      )}
+        <div className="song-option">
+          <span className="option-label">Speed</span>
+          {CARNATIC_SPEEDS.map(v => (
+            <button key={v} className={speed === v ? 'active' : ''} disabled={active} onClick={() => setSpeed(v)}>
+              {speedLabel(v, true)}
+            </button>
+          ))}
+        </div>
+
+        <TanpuraControl on={drone} onToggle={toggleDrone} />
+        <AmbientControl on={ambient} onToggle={toggleAmbient} />
+        <label className="unlock">
+          <input type="checkbox" checked={listenFirst} disabled={active} onChange={e => setListenFirst(e.target.checked)} />
+          Listen to each line first, then play it back
+        </label>
+
+        <p className="song-note">Long bars mean hold the key down until the bar has gone into the piano.</p>
+        {startStop}
+
+        <div className="sheet-title">
+          All notes in order <span>· {songs[exerciseNow].events.length} notes · {line.totalBeats} beats per line (one {line.talam.name} talam cycle, {line.talam.parts})</span>
+        </div>
+        <NoteSheet song={songs[exerciseNow]} />
+      </div>
     </div>
   );
 }

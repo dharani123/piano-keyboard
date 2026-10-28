@@ -13,7 +13,7 @@ export function journeyLines(songs) {
       const events = song.events
         .filter(e => e.beat >= from && e.beat < from + beats)
         .map(e => ({ ...e, beat: e.beat - from }));
-      return { exercise, line, lines: count, id: song.id, title: song.title, events, totalBeats: beats, talam: song.talam, sa: song.sa ?? 0, layout: song.layout ?? 0 };
+      return { exercise, line, lines: count, id: song.id, title: song.title, level: song.level, events, totalBeats: beats, talam: song.talam, sa: song.sa ?? 0, layout: song.layout ?? 0 };
     });
   });
 }

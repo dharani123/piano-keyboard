@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, test, expect } from 'vitest';
 import { journeyLines, playAlongPlan, segmentAt, appNotes } from './relax.js';
-import { carnaticSongs } from './carnatic.js';
+import { carnaticSongs, geethamSongs } from './carnatic.js';
 
 describe('journeyLines', () => {
   const lines = journeyLines(carnaticSongs('mayamalavagowla'));
@@ -71,4 +71,13 @@ describe('appNotes', () => {
   it('plays nothing without listening', () => {
     expect(appNotes(lines, playAlongPlan(lines, s2, false))).toEqual([]);
   });
+});
+
+test('the geetham joins the Relax journey in its raga, one Matya cycle (10 beats) per line', () => {
+  const lines = journeyLines([...carnaticSongs('shankarabharanam'), ...geethamSongs('shankarabharanam')]);
+  const geetham = lines.filter(l => l.level === 'Geetham');
+  expect(geetham).toHaveLength(11);
+  expect(geetham.every(l => l.totalBeats === 10)).toBe(true);
+  const plan = playAlongPlan(lines, lines.indexOf(geetham[0]), true);
+  expect(plan.song.totalBeats).toBe(11 * 10 * 2);
 });
