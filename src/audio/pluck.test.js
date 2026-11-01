@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pluckSamples } from './pluck.js';
+import { pluckSamples, veenaSamples } from './pluck.js';
 
 const RATE = 44100;
 
@@ -44,5 +44,25 @@ describe('pluckSamples', () => {
   it('is normalised to a peak of 1', () => {
     const s = pluckSamples(440, RATE, { seconds: 1 });
     expect(Math.max(...s.map(Math.abs))).toBeCloseTo(1, 5);
+  });
+});
+
+describe('veenaSamples', () => {
+  const opts = { seconds: 6, ring: 9, buzz: 1, sympathetic: [130.81, 196, 261.63], body: [{ freq: 215, q: 9, gain: 2.5 }] };
+
+  it('is in tune across the keyboard', () => {
+    for (const f of [196, 261.63, 349.23, 523.25, 698.46]) {
+      const s = veenaSamples(f, RATE, { ...opts, seconds: 1, sympathetic: [], body: [] });
+      expect(Math.abs(cents(pitchOf(s, 4000, 12000), f))).toBeLessThan(3);
+    }
+  });
+
+  it('always fades, even at full jawari buzz', () => {
+    for (const f of [130.81, 261.63, 698.46]) {
+      const s = veenaSamples(f, RATE, opts);
+      const early = rms(s.subarray(RATE / 20, RATE / 5));
+      const late = rms(s.subarray(5 * RATE, 5.25 * RATE));
+      expect(late).toBeLessThan(early * 0.3);
+    }
   });
 });

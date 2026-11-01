@@ -355,6 +355,8 @@ export const UNITS = [
   },
   {
     title: 'Scales',
+    // open even before Ear training is finished (user's choice): its first lesson is always unlocked
+    openStart: true,
     lessons: [
       {
         id: 'c-major',

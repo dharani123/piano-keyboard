@@ -1,10 +1,12 @@
 import { INSTRUMENTS } from '../audio/instruments.js';
 
+const VOICE_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '−', '='];
+
 // playSlotRef: a spot under the voices where the open song puts a second Start/Stop button
 export default function VoicePanel({ voiceIndex, onSelect, playSlotRef }) {
   return (
     <div className="panel voice-panel">
-      <div className="panel-title">Voice <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>0</kbd></div>
+      <div className="panel-title">Voice <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>0</kbd> <kbd>−</kbd> <kbd>=</kbd></div>
       {/* voice rows sized to fit; the last row (spare Start/Stop) takes the rest of the panel's height */}
       <div className="voices" style={{ gridTemplateRows: `repeat(${Math.ceil(INSTRUMENTS.length / 2)}, auto) 1fr` }}>
         {INSTRUMENTS.map((inst, i) => (
@@ -14,7 +16,7 @@ export default function VoicePanel({ voiceIndex, onSelect, playSlotRef }) {
             onClick={() => onSelect(i)}
           >
             <span className="led" />
-            <span className="voice-num">{(i + 1) % 10}</span>
+            <span className="voice-num">{VOICE_LABELS[i]}</span>
             {inst.name}
           </button>
         ))}

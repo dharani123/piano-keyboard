@@ -10,7 +10,9 @@ const CARNATIC_MODE_KEY = 'desk-piano-carnatic-mode';
 
 export default function Lessons({ piano }) {
   const [progress, setProgress] = useState(loadProgress);
-  const isUnlocked = i => progress.unlockAll || i === 0 || hasPassed(progress, LESSONS[i - 1].id);
+  // a unit marked openStart can be started without finishing the units before it
+  const opensUnit = i => LESSONS[i].unit !== LESSONS[i - 1].unit && UNITS[LESSONS[i].unit].openStart;
+  const isUnlocked = i => progress.unlockAll || i === 0 || opensUnit(i) || hasPassed(progress, LESSONS[i - 1].id);
   const [selected, setSelected] = useState(() => {
     const next = LESSONS.findIndex(l => !hasPassed(progress, l.id));
     return next === -1 ? 0 : next;
@@ -65,9 +67,10 @@ export default function Lessons({ piano }) {
           Ear Gym {gymOpen ? '🎧' : '🔒'}
         </button>
         <button className={tab === 'western' ? 'active' : ''} onClick={() => setTab('western')}>Western Music 🎵</button>
+        <button className={tab === 'decoded' ? 'active' : ''} onClick={() => setTab('decoded')}>Decoded Songs 🎼</button>
         {!gymOpen && <span className="learn-tabs-note">Pass Ear training to open</span>}
       </div>
-      {tab === 'carnatic' && carnaticMode === 'relax' ? <RelaxMode piano={piano} modeSwitch={modeSwitch} /> : tab === 'western' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} modeSwitch={tab === 'carnatic' ? modeSwitch : null} /> : tab === 'gym' && gymOpen ? <EarGym piano={piano} /> : (
+      {tab === 'carnatic' && carnaticMode === 'relax' ? <RelaxMode piano={piano} modeSwitch={modeSwitch} /> : tab === 'western' || tab === 'decoded' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} modeSwitch={tab === 'carnatic' ? modeSwitch : null} /> : tab === 'gym' && gymOpen ? <EarGym piano={piano} /> : (
       <div className="lessons">
         <aside className="course">
           <div className="panel-title">Lessons · {done}/{LESSONS.length} passed</div>

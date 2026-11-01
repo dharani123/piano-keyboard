@@ -13,7 +13,10 @@ export function journeyLines(songs) {
       const events = song.events
         .filter(e => e.beat >= from && e.beat < from + beats)
         .map(e => ({ ...e, beat: e.beat - from }));
-      return { exercise, line, lines: count, id: song.id, title: song.title, level: song.level, events, totalBeats: beats, talam: song.talam, sa: song.sa ?? 0, layout: song.layout ?? 0 };
+      // a note held past the line's end (Western songs) stretches the line so it can finish
+      const ends = events.map(e => e.beat + e.beats);
+      const length = Math.max(beats, Math.ceil(Math.max(0, ...ends) - 1e-9));
+      return { exercise, line, lines: count, id: song.id, title: song.title, level: song.level, events, totalBeats: length, talam: song.talam, sa: song.sa ?? 0, layout: song.layout ?? 0 };
     });
   });
 }

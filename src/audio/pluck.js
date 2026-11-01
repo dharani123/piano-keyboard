@@ -37,14 +37,22 @@ export function pluckSamples(freq, sampleRate, opts = {}) {
   return out;
 }
 
-// One plane of the string, not normalised
-function string(freq, sampleRate, length, ring, position, softness) {
-  const out = new Float32Array(length);
+const JAWARI_DEPTH = 0.04;
 
-  // The loop delays by period - 0.5 (the averaging filter's half sample);
+// One plane of the string, not normalised. shape (veena only):
+//   brightness – leans the loss filter towards the newest sample, so fewer
+//                highs are lost per trip
+//   buzz       – a one-sided bridge inside the loop that bends the swing on
+//                one side, scaled to the string's recent level
+function string(freq, sampleRate, length, ring, position, softness, shape = {}) {
+  const { brightness = 0, buzz = 0 } = shape;
+  const out = new Float32Array(length);
+  const tilt = 0.5 - 0.4 * brightness; // filter = (1 - tilt)·new + tilt·previous
+
+  // The loop delays by period - tilt (the loss filter's own delay);
   // the integer part is the delay line, the fraction a first-order all-pass,
   // so every note is exactly in tune.
-  const loop = sampleRate / freq - 0.5;
+  const loop = sampleRate / freq - tilt;
   let n = Math.floor(loop);
   let frac = loop - n;
   if (frac < 0.1) { n -= 1; frac += 1; } // keep the all-pass coefficient well behaved
@@ -65,13 +73,27 @@ function string(freq, sampleRate, length, ring, position, softness) {
   const shift = Math.max(1, Math.round(position * n));
   const excited = line.map((v, i) => v - line[(i - shift + n) % n]);
 
+  // The bridge follows the string's recent swing, so it keeps grazing it
+  // however quiet the note gets
+  let level = 0;
+  let dc = 0;
+  const fade = Math.exp(-1 / (sampleRate * 0.05));
+
   let idx = 0;
   let prev = 0;
   let apX = 0;
   let apY = 0;
   for (let i = 0; i < length; i++) {
-    const cur = excited[idx];
-    const avg = loss * 0.5 * (cur + prev);
+    let cur = excited[idx];
+    if (buzz > 0) {
+      // a lopsided curve on one side only: adds back upper harmonics each
+      // trip without eating the note's energy
+      level = Math.max(Math.abs(cur), level * fade);
+      if (cur > 0 && level > 1e-9) cur += JAWARI_DEPTH * buzz * (cur * cur / level - 0.4 * cur);
+      dc += (cur - dc) * 0.002; // the bend only pushes one way; don't let it drift
+      cur -= dc;
+    }
+    const avg = loss * ((1 - tilt) * cur + tilt * prev);
     prev = cur;
     const y = apC * avg + apX - apC * apY; // fractional-delay all-pass
     apX = avg;
@@ -80,5 +102,87 @@ function string(freq, sampleRate, length, ring, position, softness) {
     if (++idx === n) idx = 0;
     out[i] = cur;
   }
+  return out;
+}
+
+// A veena note: two string planes as above, but with the parts that make a
+// real veena sound alive rather than electronic.
+//
+// opts (on top of seconds, ring, position, softness, spread):
+//   brightness  – 0..1 less damping per trip; steel strings keep their highs
+//   buzz        – 0..1 jawari: the string grazes the flat bridge on every
+//                 swing, so the buzzy upper harmonics keep coming back as it rings
+//   nail        – 0..1 loudness of the fingernail click at the start
+//   sympathetic – Hz of the side (tala) strings that ring along softly
+//   coupling    – how strongly the side strings pick up the note
+//   body        – wooden resonator modes [{ freq, q, gain }]; bodyMix 0..1
+export function veenaSamples(freq, sampleRate, opts = {}) {
+  const {
+    seconds = 7, ring = 7, position = 0.11, softness = 0.4, spread = 1.2,
+    brightness = 0.5, buzz = 0.5, nail = 0.3,
+    sympathetic = [], coupling = 0.002, body = [], bodyMix = 0.4,
+  } = opts;
+  const length = Math.floor(sampleRate * seconds);
+  const lean = Math.pow(2, spread / 2400);
+  const shape = { brightness, buzz };
+  const a = string(freq * lean, sampleRate, length, ring, position, softness, shape);
+  const b = string(freq / lean, sampleRate, length, ring * 0.75, position * 1.25, softness, shape);
+  const out = new Float32Array(length);
+  for (let i = 0; i < length; i++) out[i] = 0.6 * a[i] + 0.4 * b[i];
+
+  // Fingernail: a few milliseconds of bright, high-passed noise
+  const clickLen = Math.floor(sampleRate * 0.004);
+  let hp = 0;
+  let last = 0;
+  for (let i = 0; i < clickLen; i++) {
+    const n = Math.random() * 2 - 1;
+    hp = 0.7 * (hp + n - last);
+    last = n;
+    out[i] += nail * hp * (1 - i / clickLen);
+  }
+
+  // Side strings: tuned loops the note keeps feeding, so only the harmonics
+  // they share with it build up, the faint halo behind a veena
+  const halo = new Float32Array(length);
+  for (const f of sympathetic) {
+    const n = Math.max(2, Math.round(sampleRate / f - 0.5));
+    const loss = Math.pow(10, -3 / (f * 9));
+    const line = new Float32Array(n);
+    let idx = 0;
+    let prev = 0;
+    for (let i = 0; i < length; i++) {
+      const cur = line[idx];
+      line[idx] = loss * 0.5 * (cur + prev) + coupling * out[i];
+      prev = cur;
+      if (++idx === n) idx = 0;
+      halo[i] += cur;
+    }
+  }
+
+  // Kudam: the big wooden pot, a handful of resonances that colour every note
+  const wood = new Float32Array(length);
+  for (const { freq: mf, q, gain } of body) {
+    const w = (2 * Math.PI * mf) / sampleRate;
+    const r = Math.exp(-w / (2 * q));
+    const c1 = 2 * r * Math.cos(w);
+    const c2 = -r * r;
+    const g = (1 - r) * gain;
+    let y1 = 0;
+    let y2 = 0;
+    for (let i = 0; i < length; i++) {
+      const y = g * out[i] + c1 * y1 + c2 * y2;
+      y2 = y1;
+      y1 = y;
+      wood[i] += y;
+    }
+  }
+
+  let max = 0;
+  for (let i = 0; i < length; i++) {
+    const s = out[i] + halo[i] + bodyMix * wood[i];
+    out[i] = s;
+    if (Math.abs(s) > max) max = Math.abs(s);
+  }
+  if (max > 0) for (let i = 0; i < length; i++) out[i] /= max;
   return out;
 }

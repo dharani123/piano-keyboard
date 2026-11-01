@@ -13,7 +13,9 @@
 //         `from` to `to` over `time` seconds
 // pluck: render the note as a plucked string instead (see pluck.js for the
 //        options); it fades by itself, so env only needs attack and release
-// body: peaking boost (Hz, dB) for the instrument's wooden body
+// veena: like pluck, but rendered by veenaSamples (jawari, side strings, kudam)
+// body: peaking boost { freq, gain } (Hz, dB) for the instrument's wooden body,
+//       or a list of them for several resonances
 // space: extra send (0..1) into the long dream reverb, on top of the Reverb knob
 // drive: soft-clipping fuzz amount (1 = clean-ish, higher = buzzier)
 // glide: seconds to slide from the previous note's pitch (only right after one)
@@ -158,6 +160,48 @@ export const INSTRUMENTS = [
     vibrato: { rate: 0.3, depth: 4 },
     phaser: { rate: 0.15, depth: 0.6 },
     space: 0.8,
+  },
+  {
+    // Saraswati veena: steel string plucked with the fingernail near the
+    // bridge, the jawari's living buzz, Sa–Pa–Sa side strings humming along
+    // and the warm, woody boom of the jackfruit-wood kudam
+    id: 'veena',
+    name: 'Veena',
+    veena: {
+      seconds: 8, ring: 9, position: 0.1, softness: 0.35, spread: 1.2,
+      brightness: 0.5, buzz: 0.7, nail: 0.25,
+      sympathetic: [130.81, 196, 261.63], coupling: 0.002,
+      body: [
+        { freq: 105, q: 6, gain: 3 },
+        { freq: 215, q: 9, gain: 2.5 },
+        { freq: 390, q: 10, gain: 1.6 },
+        { freq: 620, q: 12, gain: 1 },
+        { freq: 1150, q: 8, gain: 0.6 },
+        { freq: 2600, q: 4, gain: 0.3 },
+      ],
+      bodyMix: 0.5,
+    },
+    env: { attack: 0.002, release: 1.5 },
+    filter: { from: 14, to: 6, time: 3, q: 0.5 },
+    settle: { cents: 8, time: 0.08 },
+    space: 0.15,
+  },
+  {
+    // Steel-string acoustic guitar: picked a hand's width from the bridge,
+    // two strings planes for shimmer, no buzz, and a hollow spruce body with
+    // its air resonance (~100 Hz) and top-plate thump (~210 Hz)
+    id: 'guitar',
+    name: 'Guitar',
+    pluck: { seconds: 6, ring: 5, position: 0.2, softness: 0.45, jawari: 0, spread: 1 },
+    body: [
+      { freq: 100, gain: 4, q: 1.2 },
+      { freq: 210, gain: 3, q: 1.5 },
+      { freq: 2800, gain: 2, q: 0.8 },
+    ],
+    env: { attack: 0.002, release: 0.35 },
+    filter: { from: 12, to: 4, time: 2, q: 0.5 },
+    settle: { cents: 4, time: 0.05 },
+    space: 0.1,
   },
 ];
 

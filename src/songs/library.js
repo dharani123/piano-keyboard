@@ -3,6 +3,8 @@ import { parseSong } from './parse.js';
 // Melody only (no bass), written to fit the on-screen keys, C to high F.
 // All are old public-domain tunes except "Less Than Zero", which is a chord
 // track only (the chords found in the user's tutorial recording, not its melody).
+// "Decoded songs" are melodies the user transcribed from their own recordings
+// (sheet music made with an online transcriber), kept for their own practice.
 const RAW = [
   {
     id: 'hot-cross-buns',
@@ -121,6 +123,45 @@ const RAW = [
               C,E,G/8 F,A,C+/8 C,E,G/8 F,A,C+/8 | A,C+,E+/8 E,G,B/8 G,B,D+/16 |
               C,E,G/8 F,A,C+/8 C,E,G/8 F,A,C+/8 | C,E,G/8 F,A,C+/8 C,E,G/8 F,A,C+/8 |
               C,E,G/8 F,A,C+/8 C,E,G/8 F,A,C+/8 | A,C+,E+/8 E,G,B/8 G,B,D+/16 | C,E,G/8 F,A,C+/8`,
+  },
+  {
+    id: 'say-can-you-hear',
+    title: 'Say Can You Hear (piano melody)',
+    level: 'Decoded songs',
+    bpm: 158,
+    decoded: true,
+    hint: "Right-hand melody from your Songscription sheet, in A major: keys F Y U J K P ' (E F♯ G♯ A B, high C♯ E). Try it on Dream Keys (Shift+3), and start at a slower speed.",
+    // Right hand only, from the user's Songscription sheet of the Men I Trust
+    // piano part, A major; tied notes are joined into one long note.
+    // Lines: intro (A → E) | D F#m Amaj9 | D F#m Amaj9 | D F#m Amaj9 → D Amaj9 E ending
+    pattern: `r/3 A/0.5 G#/4.5 |
+              r/2 E+/1.5 E+/1 A/0.5 A/2 E/0.5 G#/1 A/3.5 | F#/4 |
+              r/2 E+/1.5 E+/1 A/0.5 A/2 E/0.5 G#/2.5 G#/0.5 A/0.5 G#/0.5 F#/1.5 E/2.5 F#/2.5 |
+              E+/1.5 E+/1 A/0.5 A/2 E/0.5 G#/1 A/3.5 | F#/3 E/0.5 C#+/7.5 | E/0.5 B/8.5`,
+  },
+  {
+    id: 'tere-bina',
+    title: 'Tere Bina (piano melody)',
+    level: 'Decoded songs',
+    bpm: 75,
+    decoded: true,
+    // the tune climbs to A5, so the keys slide two places for this song (row = D4…A5)
+    layout: -2,
+    hint: "Right-hand melody from your Songscription sheet, in F♯ minor. The keys slide two places for this song (E is on S, A on G, high C♯ on I, high A on Enter). It has fast runs, so start with Listen & play at 50%.",
+    // Right hand only, from the user's Songscription sheet of A. R. Rahman's
+    // "Tere Bina" (Guru), F# minor; tied notes joined. The two C#4s in bar 1
+    // are raised an octave (C#+) because the high layout starts at D4.
+    // (user's edit: the opening five A's are replaced by the E A G# A phrase,
+    // same note lengths, with a short rest first to fill their 2.75 beats)
+    pattern: `r/0.75 E/0.5 A/0.5 G#/0.25 A/0.75 |
+              E/0.5 A/0.5 G#/0.25 A/0.75 C#+/0.5 B/0.5 A/0.125 G#/0.125 |
+              F#/2 r/0.75 F#/0.5 G#/0.5 A/0.25 |
+              C#+/0.75 F#/0.5 G#/0.5 A/0.25 D+/0.75 G#/0.5 A/0.5 C#+/0.25 |
+              E+/0.75 G#/0.5 A/0.5 C#+/0.25 F#+/1 F+/0.5 F#+/0.25 G#+/0.25 |
+              A+/0.75 C#+/0.5 A+/0.5 C#+/0.25 G#+/0.5 B/0.25 F#+/1 B/0.25 |
+              E+/0.75 D+/0.5 C#+/0.5 B/0.25 A/0.25 B/0.25 C#+/1.5 |
+              C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.75 B/0.25 |
+              A/0.5 A/0.5`,
   },
 ];
 

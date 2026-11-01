@@ -1,3 +1,4 @@
+import { playable } from '../data/keymap.js';
 import { describe, it, expect } from 'vitest';
 import { parseSong } from './parse.js';
 import { createPlay, press, advance, score, pitchKey } from './player.js';
@@ -92,12 +93,12 @@ describe('score', () => {
 });
 
 describe('song library', () => {
-  it('keeps every note on the on-screen keys (C up to the high F)', () => {
+  it("keeps every note on the on-screen keys of the song's layout", () => {
     for (const s of SONG_LIBRARY) {
+      const keys = playable(s.layout ?? 0);
       for (const e of s.events) {
         for (const n of e.notes) {
-          const ok = n.oct === 0 || (n.oct === 1 && n.semitone <= 5);
-          expect(ok, `${s.title}: ${n.name}${n.oct}`).toBe(true);
+          expect(keys.has(n.oct * 12 + n.semitone), `${s.title}: ${n.name}${n.oct}`).toBe(true);
         }
       }
     }

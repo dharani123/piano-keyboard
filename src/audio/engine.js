@@ -1,6 +1,6 @@
 import { instrumentById } from './instruments.js';
 import { VoiceManager } from './voiceManager.js';
-import { pluckSamples } from './pluck.js';
+import { pluckSamples, veenaSamples } from './pluck.js';
 
 // Signal chain:
 //   voices → bus ─┬─────────────────────────→ master → compressor → speakers
@@ -97,7 +97,7 @@ const lastGlide = new Map();
 
 function startVoice(freq, instrumentId, now = ctx.currentTime) {
   const inst = instrumentById[instrumentId];
-  if (inst.pluck) return startPluck(freq, inst, now);
+  if (inst.pluck || inst.veena) return startPluck(freq, inst, now);
   const { env, filter: f } = inst;
   const totalGain = inst.partials.reduce((sum, p) => sum + p.gain, 0);
   const peak = 0.6 / totalGain;
@@ -214,7 +214,9 @@ const pluckCache = new Map();
 function pluckBuffer(freq, inst) {
   const key = `${inst.id}:${freq.toFixed(2)}:${Math.floor(Math.random() * PLUCK_TAKES)}`;
   if (!pluckCache.has(key)) {
-    const samples = pluckSamples(freq, ctx.sampleRate, inst.pluck);
+    const samples = inst.veena
+      ? veenaSamples(freq, ctx.sampleRate, inst.veena)
+      : pluckSamples(freq, ctx.sampleRate, inst.pluck);
     const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
     buffer.copyToChannel(samples, 0);
     pluckCache.set(key, buffer);
@@ -225,7 +227,7 @@ function pluckBuffer(freq, inst) {
 // A plucked-string note: rendered samples through the body and tone filters
 function startPluck(freq, inst, now) {
   const { env, filter: f, body } = inst;
-  const end = now + inst.pluck.seconds;
+  const end = now + (inst.veena || inst.pluck).seconds;
   const source = ctx.createBufferSource();
   source.buffer = pluckBuffer(freq, inst);
   if (inst.settle) {
@@ -245,11 +247,23 @@ function startPluck(freq, inst, now) {
   filter.frequency.exponentialRampToValueAtTime(Math.min(Math.max(freq * f.to, 300), 18000), now + f.time);
   filter.connect(out);
 
-  const resonance = ctx.createBiquadFilter();
-  resonance.type = 'peaking';
-  resonance.frequency.value = body.freq;
-  resonance.gain.value = body.gain;
-  source.connect(resonance).connect(filter);
+  if (inst.space) {
+    const send = ctx.createGain();
+    send.gain.value = inst.space;
+    out.connect(send).connect(dreamIn);
+  }
+
+  // the veena renders its own body; a plain pluck gets its wooden peak(s)
+  let chain = source;
+  for (const peak of body ? [].concat(body) : []) {
+    const resonance = ctx.createBiquadFilter();
+    resonance.type = 'peaking';
+    resonance.frequency.value = peak.freq;
+    resonance.gain.value = peak.gain;
+    if (peak.q) resonance.Q.value = peak.q;
+    chain = chain.connect(resonance);
+  }
+  chain.connect(filter);
 
   source.start(now);
   source.stop(end);

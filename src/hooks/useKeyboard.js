@@ -48,9 +48,10 @@ export function useKeyboard(handlers) {
   }, []);
 }
 
-// Shift + 1–9, 0 picks a voice (0 = the 10th)
-const voiceDigit = (code, shift) => shift && code.match(/^Digit([0-9])$/);
-const noteFor = (code, shift) => (voiceDigit(code, shift) ? null : noteCodeFor(code));
+// Shift + 1–9, 0, −, = picks a voice (0 = the 10th, − = the 11th, = = the 12th)
+const VOICE_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];
+const voiceDigit = (code, shift) => (shift && VOICE_KEYS.includes(code) ? VOICE_KEYS.indexOf(code) : null);
+const noteFor = (code, shift) => (voiceDigit(code, shift) !== null ? null : noteCodeFor(code));
 
 export function keyAction(code, shift = false) {
   const note = noteFor(code, shift);
@@ -60,7 +61,7 @@ export function keyAction(code, shift = false) {
   if (code === 'KeyX') return h => h.octave(1);
   if (code === 'ArrowLeft') return h => h.transpose(-1);
   if (code === 'ArrowRight') return h => h.transpose(1);
-  const digit = voiceDigit(code, shift);
-  if (digit) return h => h.voice((Number(digit[1]) + 9) % 10);
+  const voice = voiceDigit(code, shift);
+  if (voice !== null) return h => h.voice(voice);
   return null;
 }
