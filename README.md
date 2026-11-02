@@ -22,7 +22,7 @@ Open http://localhost:5173.
 
 - **Lessons**: a step-by-step course (keyboard, rhythm, intervals, ear training, scales, chords, songs)
 - **Ear Gym**: adaptive name-that-note drills
-- **Western Music**: falling-notes songs (public-domain tunes), with *Wait for me* and *Play along* modes, plus importing your own audio to try automatic transcription
+- **Western Music**: falling-notes songs (public-domain tunes), with *Listen* and *Play along* modes, plus importing your own audio to try automatic transcription
 - **Carnatic Music**: Sarali and Janta varisais in Mayamalavagowla or Shankarabharanam, labelled in swaras (Sa Ri Ga Ma Pa Da Ni)
 - **Carnatic Relax**: the varisais in the traditional order with a tanpura drone, listen-then-play and no scores
 

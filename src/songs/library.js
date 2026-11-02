@@ -113,6 +113,26 @@ const RAW = [
               C/0.75 C/0.25 C+ A F E D/2 | A#/0.75 A#/0.25 A F G F/2`,
   },
   {
+    id: 'fur-elise',
+    title: 'Für Elise (opening)',
+    level: 'Hard',
+    bpm: 100,
+    hint: "Beethoven, in A minor. The E–D♯ wiggle is the keys ' and [ (high E, high D♯). Keep it light and even, and start at a slower speed.",
+    pattern: `E+/0.5 D#+/0.5 | E+/0.5 D#+/0.5 E+/0.5 B/0.5 D+/0.5 C+/0.5 | A/1 r/0.5 C/0.5 E/0.5 A/0.5 |
+              B/1 r/0.5 E/0.5 G#/0.5 B/0.5 | C+/1 r/0.5 E/0.5 E+/0.5 D#+/0.5 |
+              E+/0.5 D#+/0.5 E+/0.5 B/0.5 D+/0.5 C+/0.5 | A/1 r/0.5 C/0.5 E/0.5 A/0.5 |
+              B/1 r/0.5 E/0.5 C+/0.5 B/0.5 | A/2`,
+  },
+  {
+    id: 'greensleeves',
+    title: 'Greensleeves (verse)',
+    level: 'Hard',
+    bpm: 120,
+    hint: 'A minor in 3/4, with dotted rhythms. G♯ (key U) is the leading note that pulls up to A.',
+    pattern: `A | C+/2 D+ | E+/1.5 F+/0.5 E+ | D+/2 B | G/1.5 A/0.5 B | C+/2 A | A/1.5 G#/0.5 A | B/2 G# | E/2 A |
+              C+/2 D+ | E+/1.5 F+/0.5 E+ | D+/2 B | G/1.5 A/0.5 B | C+/1.5 B/0.5 A | G#/1.5 F#/0.5 G# | A/3`,
+  },
+  {
     id: 'less-than-zero',
     title: 'Less Than Zero (chords)',
     level: 'Chords',
@@ -162,6 +182,26 @@ const RAW = [
               E+/0.75 D+/0.5 C#+/0.5 B/0.25 A/0.25 B/0.25 C#+/1.5 |
               C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.5 C#+/0.75 B/0.25 |
               A/0.5 A/0.5`,
+  },
+  {
+    id: 'namo-namo-ji-shankara',
+    title: 'Namo Namo Ji Shankara (piano melody)',
+    level: 'Decoded songs',
+    bpm: 180,
+    decoded: true,
+    hint: "Right-hand melody merged from your two Songscription sheets, in E major: keys E F Y U J K (C♯ E F♯ G♯ A B). It lives on F♯ and G♯ (Y and U), so keep those two fingers ready. At 180 BPM the beats go by fast, so start at 50–75%.",
+    // Right hand only, merged from two Songscription sheets of "Namo Namo" (Kedarnath),
+    // E major, q = 180. Opening (5 bars of 6/8) from the second sheet (first 15 s),
+    // which caught the held G#s the first sheet missed (its B A G# pickup left out at
+    // the user's request, rest kept so the timing stays; the empty bar after C# E F#
+    // filled with another G#/2.5 F#/0.5 at the user's request);
+    // the rest from the first sheet (6/4 bars; its start matches sheet 2 bars 6-14).
+    // Chords: F#m B E G#m7 F#m7/E A B E/B G#m7 F#m7/E ... A/E B. Tied notes joined.
+    pattern: `r/1.5 C#/0.5 E/0.5 F#/0.5 | G#/2.5 F#/0.5 | G#/2.5 F#/0.5 | G#/2.5 F#/0.5 |
+              G# F#/0.5 F# E/0.5 F#/2.5 E/0.5 | F#/2.5 E/0.5 F#/2.5 G#/0.5 |
+              F#/0.5 G#/0.5 G#/0.5 F# E/0.5 G#/2.5 B/0.5 | G#/2.5 B/0.5 G#/2.5 G#/0.5 |
+              F#/0.5 G#/0.5 G#/0.5 F# E/0.5 E F#/0.5 F# F#/0.5 | F# E/0.5 G# E/0.5 E/6 C# F#/1.5 F#/0.5 |
+              F# E/0.5 G# E/0.5 E/3 | F#/3 E F#/0.5 G#/1.5`,
   },
 ];
 

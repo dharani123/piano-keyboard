@@ -6,6 +6,7 @@ import {
   startSteps, stepReducer, currentStep, octaveShiftNeeded, starsForMistakes, HINT_AFTER,
 } from '../../lessons/stepTrainer.js';
 import RichText from './RichText.jsx';
+import Staff from '../sheet/Staff.jsx';
 
 // rel = the note's octave relative to the piano's current one
 // The high-octave key (L ; ' Enter, P [) for a note one octave up, if it has one
@@ -80,6 +81,7 @@ export default function StepExercise({ exercise, piano, onProgress, onComplete }
       <div className="prompt">
         {step ? <RichText text={step.prompt ?? exercise.prompt} /> : '🎉 Done!'}
       </div>
+      {(step?.staff ?? (!step && state.steps.at(-1)?.staff)) && <Staff {...(step?.staff ?? state.steps.at(-1).staff)} scale={step?.staff?.items.length > 3 ? 1.6 : 2.2} />}
       <div className="exercise-hint">
         {shift > 0 && <>First go <b>octave up</b>: press <kbd>X</kbd></>}
         {shift < 0 && <>First go <b>octave down</b>: press <kbd>Z</kbd></>}

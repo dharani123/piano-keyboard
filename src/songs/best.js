@@ -10,7 +10,7 @@ export function saveBest(best) {
   try { localStorage.setItem(KEY, JSON.stringify(best)); } catch { /* storage unavailable */ }
 }
 
-// ★★ in either mode, or played through in Relax
+// ★★ in Play along (or the old Wait for me mode), or played through in Relax
 export const isPassed = (best, id) =>
   Math.max(best[`${id}:wait`] ?? 0, best[`${id}:play`] ?? 0, best[`${id}:relax`] ?? 0) >= PASS_STARS;
 

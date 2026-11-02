@@ -23,35 +23,6 @@ describe('parseSong', () => {
   });
 });
 
-describe('wait mode', () => {
-  it('stops at a note until it is pressed', () => {
-    const s = createPlay(song('r C/2'), { mode: 'wait', baseOctave: 4, secondsPerBeat: 0.5 });
-    advance(s, 3, held());
-    expect(s.beat).toBe(1);
-    expect(press(s, 0, 4)).not.toBeNull();
-    advance(s, 1, held([0, 4]));
-    expect(s.beat).toBe(2);
-  });
-
-  it('needs every note of a chord before moving on', () => {
-    const s = createPlay(song('C,E,G/2'), { mode: 'wait', baseOctave: 4, secondsPerBeat: 0.5 });
-    press(s, 0, 4);
-    press(s, 4, 4);
-    advance(s, 1, held([0, 4], [4, 4]));
-    expect(s.beat).toBe(0);
-    press(s, 7, 4);
-    advance(s, 1, held([0, 4], [4, 4], [7, 4]));
-    expect(s.beat).toBe(1);
-  });
-
-  it('a held key does not count for the next repeat of that note', () => {
-    const s = createPlay(song('C C'), { mode: 'wait', baseOctave: 4, secondsPerBeat: 0.5 });
-    press(s, 0, 4);
-    advance(s, 2, held([0, 4]));
-    expect(s.beat).toBe(1);
-  });
-});
-
 describe('play mode', () => {
   it('keeps going and marks notes you skip as missed', () => {
     const s = createPlay(song('C D'), { mode: 'play', baseOctave: 4, secondsPerBeat: 0.5 });
@@ -84,7 +55,7 @@ describe('score', () => {
   });
 
   it('takes a little off for wrong keys', () => {
-    const s = createPlay(song('C'), { mode: 'wait', baseOctave: 4, secondsPerBeat: 0.5 });
+    const s = createPlay(song('C'), { mode: 'play', baseOctave: 4, secondsPerBeat: 0.5 });
     press(s, 5, 4);
     press(s, 0, 4);
     advance(s, 1, held([0, 4]));

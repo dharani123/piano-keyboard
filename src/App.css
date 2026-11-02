@@ -474,16 +474,19 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .sheet-title { margin: 18px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
 .sheet-title span { text-transform: none; letter-spacing: 0; }
 .note-sheet { max-height: 300px; overflow-y: auto; background: #15161a; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
-.sheet-line { display: flex; align-items: stretch; gap: 3px; }
-.sheet-num { width: 22px; flex-shrink: 0; font-size: 10px; color: #555963; font-family: ui-monospace, monospace; align-self: center; }
-.sheet-note { flex-basis: 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 3px 5px; border: 1px solid #2f3239; border-radius: 4px; font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; }
+.sheet-line { display: grid; align-items: stretch; }
+.sheet-line > .sheet-note { margin-right: 3px; }
+.sheet-ruler { position: sticky; top: -8px; z-index: 1; background: #15161a; padding: 4px 0 3px; margin-top: -8px; border-bottom: 1px solid #2f3239; font-family: ui-monospace, monospace; font-size: 10px; }
+.sheet-ruler .beat { color: var(--text); padding-left: 5px; border-left: 1px solid #555963; }
+.sheet-ruler .and { color: #555963; padding-left: 5px; }
+.sheet-num { grid-column: 1; width: 22px; font-size: 10px; color: #555963; font-family: ui-monospace, monospace; align-self: center; }
+.sheet-note { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 3px 5px; border: 1px solid #2f3239; border-radius: 4px; font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; }
 .sheet-note b { font-size: 14px; color: var(--text); }
 .sheet-note small { font-size: 9px; color: var(--muted); }
 .sheet-note.mark { margin-left: 10px; position: relative; }
 .sheet-note.mark::before { content: '|'; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); color: #555963; }
 .sheet-note.rest { border-style: dashed; }
 .sheet-note.rest b { color: var(--muted); }
-.sheet-rest { flex-basis: 0; }
 .song-list > .unit:first-child .carnatic-head { margin-top: 0; padding-top: 0; border-top: none; }
 
 /* ---- carnatic relax ---- */
@@ -573,3 +576,22 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .size-big .key .note-name { font-size: 18px; }
 .size-big .black .note-name { font-size: 15px; }
 .size-big .fall-note { font-size: 14px; }
+
+/* ── Sheet reading: staff notation + multiple choice ───────────────────── */
+@font-face { font-family: 'NotoMusic'; src: url('/fonts/NotoMusic-Regular.ttf') format('truetype'); font-display: block; }
+.staff-figure { margin: 6px 0 14px; }
+.staff-figure figcaption { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.staff { display: block; max-width: 100%; height: auto; }
+.st-line { stroke: var(--muted); stroke-width: 1; }
+.st-ledger { stroke: var(--text); stroke-width: 1.2; }
+.st-glyph { fill: var(--text); }
+.st-time { fill: var(--text); font: 700 21px Georgia, 'DejaVu Serif', serif; }
+.st-label { font: 11px ui-monospace, monospace; text-anchor: middle; fill: var(--muted); }
+.st-above { fill: var(--text); font: 11px system-ui, sans-serif; }
+.st-dyn { fill: var(--text); font: italic 700 15px Georgia, 'DejaVu Serif', serif; }
+.st-accent { font: 700 14px system-ui, sans-serif; }
+.exercise .staff-figure { display: flex; justify-content: center; margin: 4px 0 8px; }
+.choice-options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 6px 0 4px; }
+.choice-option { min-width: 90px; }
+.choice-option.wrong { border-color: var(--wrong); color: var(--wrong); opacity: .7; }
+.choice-option.right { border-color: var(--target); color: var(--target); }

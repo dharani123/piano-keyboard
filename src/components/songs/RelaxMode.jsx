@@ -45,7 +45,7 @@ export default function RelaxMode({ piano, modeSwitch }) {
   const droneOn = useRef(drone); // read by tuneDrone mid-run
   const [ambient, setAmbient] = useState(loadAmbient);
   const ambientOn = useRef(ambient);
-  const [listenFirst, setListenFirst] = useState(true);
+  const [listenFirst, setListenFirst] = useState(false);
   const [step, setStep] = useState('idle'); // idle | listen | play | rest
   const [restLeft, setRestLeft] = useState(0); // seconds left in the break
   const [sounding, setSounding] = useState(-1); // event index heard right now

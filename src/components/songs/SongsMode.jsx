@@ -14,22 +14,18 @@ import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
 import RagaNav from './RagaNav.jsx';
 import FallingNotes, { FallSpace, FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
-import { createPlay, press, advance, score, pendingGroup, pitchKey } from '../../songs/player.js';
+import { createPlay, press, advance, score, pitchKey } from '../../songs/player.js';
 import { starsForAccuracy } from '../../lessons/rhythm.js';
 import { frequency } from '../../audio/pitch.js';
-import { journeyLines, playAlongPlan, appNotes, segmentAt } from '../../songs/relax.js';
 
-const LOOKAHEAD_BEATS_SECONDS = 1.5; // the app's notes are created this far ahead, never all at once
 
 const COUNT_IN = 4;
 const SPEEDS = [0.5, 0.75, 1];
 // kind = which tab this is: 'western', 'decoded' or 'carnatic'
-const LEVELS = { western: ['Easy', 'Medium', 'Chords', 'My songs'], decoded: ['Decoded songs'], carnatic: [...CARNATIC_LEVELS, GEETHAM_LEVEL] };
+const LEVELS = { western: ['Easy', 'Medium', 'Hard', 'Chords', 'My songs'], decoded: ['Decoded songs'], carnatic: [...CARNATIC_LEVELS, GEETHAM_LEVEL] };
 const RAGA_KEY = 'desk-piano-raga';
 const MODES = {
   listen: { label: 'Listen', hint: 'The app plays the song for you while the notes fall, so you know how it goes' },
-  echo: { label: 'Listen & play', hint: 'Like Relax: hear 8 beats, then play those 8 beats back, line by line' },
-  wait: { label: 'Wait for me', hint: 'The song stops at each note until you press it' },
   play: { label: 'Play along', hint: 'The song keeps going like the real thing' },
 };
 const MESSAGES = ['Keep practising, it gets easier!', 'Nice start!', 'Great playing!', 'Perfect! 🎉'];
@@ -38,9 +34,9 @@ const MESSAGES = ['Keep practising, it gets easier!', 'Nice start!', 'Great play
 
 export default function SongsMode({ piano, kind, modeSwitch }) {
   const [songId, setSongId] = useState(null);
-  const [modeChoice, setMode] = useState('wait');
+  const [modeChoice, setMode] = useState('play');
   const [speed, setSpeed] = useState(1); // Practice starts at 1st speed
-  const [metronome, setMetronome] = useState(kind !== 'carnatic'); // off by default in Carnatic Practice
+  const [metronome, setMetronome] = useState(kind === 'western'); // off by default in Carnatic Practice and Decoded songs
   const [drone, setDrone] = useState(loadTanpura); // tanpura under Carnatic exercises
   const [ambient, setAmbient] = useState(loadAmbient); // soft chords in the raga, shared with Relax
   const [best, setBest] = useState(loadBest);
@@ -131,29 +127,17 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
   useEffect(() => piano.subscribe(e => {
     const r = run.current;
     if (!r || r.play.mode === 'listen') return;
-    if (r.echo && segmentAt(r.echo.plan.segments, r.play.beat).listening) return; // your turn hasn't come yet
     if (!press(r.play, e.semitone, e.octave)) light(targetsOf(r), e.code);
   }), [piano.subscribe]);
-
-  // the keys the app is sounding right now in a listening part (let go just before
-  // each note ends, so repeated notes press again)
-  function demoOf(r) {
-    const b = r.play.beat;
-    return r.echo.queue.filter(n => n.beat <= b && b < n.beat + n.beats * 0.92)
-      .map(n => codeFor(n.semitone, n.oct, r.song.layout ?? 0)).filter(Boolean);
-  }
 
   function targetsOf(r) {
     const { play } = r;
     // a key lights up the moment its falling note reaches it
-    if (r.echo && segmentAt(r.echo.plan.segments, play.beat).listening) return [];
     if (play.mode === 'listen') {
       return play.notes.filter(n => n.beat <= play.beat && play.beat < n.beat + n.beats)
         .map(n => codeFor(n.semitone, n.octave - r.base, r.song.layout ?? 0)).filter(Boolean);
     }
-    const near = play.mode === 'wait'
-      ? pendingGroup(play).filter(n => n.beat <= play.beat)
-      : play.notes.filter(n => !n.hit && !n.missed && n.beat <= play.beat);
+    const near = play.notes.filter(n => !n.hit && !n.missed && n.beat <= play.beat);
     return near.map(n => codeFor(n.semitone, n.octave - r.base, r.song.layout ?? 0)).filter(Boolean);
   }
 
@@ -164,16 +148,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
     stop();
     const spb = 60 / (song.bpm * speed);
     const base = piano.octave;
-    // Listen & play: the song cut into 8-beat lines, each one played by the app and then by you
-    let target = song;
-    let echo = null;
-    if (m === 'echo') {
-      const lines = journeyLines([song]).filter(l => l.events.length); // no silent lines (a long note can cover one)
-      const plan = playAlongPlan(lines, 0, true);
-      echo = { plan, queue: appNotes(lines, plan), next: 0 };
-      target = { ...song, ...plan.song };
-    }
-    const play = createPlay(target, { mode: m === 'echo' ? 'play' : m, baseOctave: base, secondsPerBeat: spb });
+    const play = createPlay(song, { mode: m, baseOctave: base, secondsPerBeat: spb });
     // start with the first notes at the top of the fall area
     const leadBeats = Math.max(COUNT_IN, FALL_HEIGHT / PX_PER_SECOND / spb);
     play.beat = -leadBeats;
@@ -192,7 +167,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
       for (let b = -COUNT_IN; b < Math.ceil(song.totalBeats); b++) engine.click(t0 + b * spb, b % 4 === 0);
     }
     const started = performance.now();
-    run.current = { play, song, base, spb, started, startBeat: play.beat, last: started, echo, t0: now + leadBeats * spb };
+    run.current = { play, song, base, spb, started, startBeat: play.beat, last: started };
     setResult(null);
     setPhase('playing');
     piano.setStatus(`${song.title.slice(0, 14).toUpperCase()}`);
@@ -202,13 +177,10 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
       const r = run.current;
       if (!r) return;
       // page clock, so the notes still move if the browser keeps audio asleep.
-      // Play-along follows the clock exactly (stays with the metronome); wait
-      // mode steps by frame, capped so a stalled tab doesn't jump ahead.
+      // follows the clock exactly (stays with the metronome)
       const t = performance.now();
       const held = new Set(pianoRef.current.getHeld().map(h => pitchKey(h.semitone, h.octave)));
-      const dBeats = r.play.mode !== 'wait'
-        ? r.startBeat + (t - r.started) / 1000 / r.spb - r.play.beat
-        : Math.min((t - r.last) / 1000, 0.25) / r.spb;
+      const dBeats = r.startBeat + (t - r.started) / 1000 / r.spb - r.play.beat;
       r.last = t;
       if (r.play.mode === 'listen') {
         // just show each note as played while it sounds
@@ -219,17 +191,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
       } else {
         advance(r.play, dBeats, held);
       }
-      if (r.echo) {
-        // top up the app's notes just ahead of time
-        const { queue } = r.echo;
-        const horizon = r.play.beat + LOOKAHEAD_BEATS_SECONDS / r.spb;
-        while (r.echo.next < queue.length && queue[r.echo.next].beat < horizon) {
-          const n = queue[r.echo.next++];
-          engine.playNote(frequency(r.base + n.oct, n.semitone, pianoRef.current.transpose), pianoRef.current.instrumentId,
-            r.t0 + n.beat * r.spb, n.beats * r.spb * 0.95);
-        }
-      }
-      light(targetsOf(r), null, r.echo ? demoOf(r) : []);
+      light(targetsOf(r));
       setFrame(f => f + 1);
       if (r.play.done) return finish(r);
       frame.current = requestAnimationFrame(tick);
@@ -246,7 +208,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
     }
     const s = score(r.play);
     const stars = starsForAccuracy(s.accuracy);
-    const id = `${r.song.id}:${r.echo ? 'echo' : r.play.mode}`;
+    const id = `${r.song.id}:${r.play.mode}`;
     const nextBest = { ...best, [id]: Math.max(stars, best[id] ?? 0) };
     setBest(nextBest);
     saveBest(nextBest);
@@ -281,8 +243,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
 
   const r = run.current;
   const fall = phase === 'playing' && r
-    ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={r.song.layout ?? 0}
-        listen={r.echo ? r.echo.queue.map(n => ({ ...n, octave: r.base + n.oct })) : []} />
+    ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={r.song.layout ?? 0} />
     : <FallSpace slot={piano.fallSlot} />;
 
   const startStop = phase === 'playing'
@@ -310,9 +271,6 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
         <div className="song-live">
           {chordNow && <span className="chord-now">Chord: <b>{chordNow}</b></span>}
           {r.play.mode === 'listen' ? <span>Listening…</span> : <span>Hit {live.hits}/{live.total}</span>}
-          {r.echo && r.play.beat >= 0 && (segmentAt(r.echo.plan.segments, r.play.beat).listening
-            ? <span className="muted">🎧 Listen…</span>
-            : <b>🎹 Your turn</b>)}
           {r.play.beat < 0 && <span className="muted">Get ready…</span>}
           <div className="progress"><div className="progress-bar" style={{ width: `${progress * 100}%` }} /></div>
           <button onClick={quit}>Stop</button>
@@ -322,8 +280,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
         <div className="result">
           <p className="result-msg">That's how it goes. Now your turn!</p>
           <div className="result-actions">
-            <button className="primary" onClick={() => begin('wait')}>▶ Wait for me</button>
-            <button onClick={() => begin('play')}>▶ Play along</button>
+            <button className="primary" onClick={() => begin('play')}>▶ Play along</button>
             <button onClick={() => begin('listen')}>↻ Listen again</button>
             <button onClick={quit}>Pick another song</button>
           </div>

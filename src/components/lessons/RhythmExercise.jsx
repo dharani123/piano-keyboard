@@ -3,14 +3,16 @@ import { engine } from '../../audio/engine.js';
 import { frequency } from '../../audio/pitch.js';
 import { bySemitone } from '../../data/keymap.js';
 import { parseRhythm, totalBeats, scoreRhythm, starsForAccuracy } from '../../lessons/rhythm.js';
+import Staff from '../sheet/Staff.jsx';
 
 const COUNT_IN = 4;
-const BEATS_PER_BAR = 4;
+const DEFAULT_BEATS_PER_BAR = 4;
 
 export default function RhythmExercise({ exercise, piano, onProgress, onComplete }) {
   const events = useMemo(() => parseRhythm(exercise.pattern), [exercise.pattern]);
   const total = totalBeats(events);
   const spb = 60 / exercise.bpm;
+  const BEATS_PER_BAR = exercise.beatsPerBar ?? DEFAULT_BEATS_PER_BAR;
   const [mode, setMode] = useState('ready'); // ready | demo | play
   const [beat, setBeat] = useState(null);
   const run = useRef(null); // { t0, base, mode, presses }
@@ -105,7 +107,8 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
         <button className="primary" onClick={() => begin('play')} disabled={mode !== 'ready'}>▶ Start</button>
         {mode !== 'ready' && <button onClick={() => { stop(); setMode('ready'); setBeat(null); }}>Stop</button>}
       </div>
-      <div className="lane">
+      {exercise.staff && <Staff {...exercise.staff} scale={1.6} />}
+      {!exercise.hideLane && <div className="lane">
         {Array.from({ length: bars - 1 }, (_, i) => (
           <div key={i} className="barline" style={{ left: `${((i + 1) * BEATS_PER_BAR / total) * 100}%` }} />
         ))}
@@ -119,7 +122,7 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
           </div>
         ))}
         {beat !== null && beat >= 0 && <div className="playhead" style={{ left: `${Math.min(beat / total, 1) * 100}%` }} />}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import RichText from './RichText.jsx';
 import MiniKeys from './MiniKeys.jsx';
+import Staff from '../sheet/Staff.jsx';
 
 export default function Theory({ blocks }) {
   return (
@@ -10,6 +11,7 @@ export default function Theory({ blocks }) {
           return <ul key={i}>{block.list.map((item, j) => <li key={j}><RichText text={item} /></li>)}</ul>;
         }
         if (block.tip) return <p key={i} className="tip">💡 <RichText text={block.tip} /></p>;
+        if (block.staff) return <Staff key={i} {...block.staff} caption={block.caption} />;
         if (block.keys) {
           return (
             <figure key={i}>

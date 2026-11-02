@@ -1,6 +1,6 @@
 // Falling-notes play-through of one song, measured in beats.
-//   wait mode: time stops at each note until you press it
 //   play mode: time keeps running like the real song
+//   listen mode: the app plays it (the UI drives the beat itself)
 // The UI calls press() on every key down and advance() every frame with the
 // keys currently held; score() grades hitting each note and holding it.
 
@@ -37,10 +37,10 @@ export function createPlay(song, { mode, baseOctave, secondsPerBeat }) {
 
 // Returns the note that was hit, or null for a wrong key
 export function press(state, semitone, octave) {
-  const { beat, windowBeats, mode } = state;
+  const { beat, windowBeats } = state;
   const note = state.notes.find(n =>
     !n.hit && !n.missed && n.semitone === semitone && n.octave === octave &&
-    n.beat <= beat + windowBeats && (mode === 'wait' || n.beat >= beat - windowBeats));
+    n.beat <= beat + windowBeats && n.beat >= beat - windowBeats);
   if (!note) {
     state.wrong++;
     return null;
@@ -57,11 +57,7 @@ export function pendingGroup(state) {
 }
 
 export function advance(state, dBeats, heldKeys) {
-  let next = state.beat + dBeats;
-  if (state.mode === 'wait') {
-    const pending = pendingGroup(state);
-    if (pending.length && next >= pending[0].beat) next = Math.max(state.beat, pending[0].beat);
-  }
+  const next = state.beat + dBeats;
   for (const n of state.notes) {
     if (!n.holding) continue;
     if (!heldKeys.has(pitchKey(n.semitone, n.octave))) { n.holding = false; continue; }

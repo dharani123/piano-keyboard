@@ -1,7 +1,8 @@
-import { parseNotes, songById } from '../data/songs.js';
+import { parseNotes } from '../data/songs.js';
 
 // The course, in the order a piano teacher would take a beginner through it:
-// orientation → rhythm → intervals & hand position → ear (name that note) → scales → chords → songs.
+// orientation → rhythm → intervals & hand position → ear (name that note) → scales → chords →
+// scales in depth → chords in depth. Songs live in the Western Music tab (Easy / Medium / Hard).
 //
 // Theory blocks: a string is a paragraph; { list }, { tip }, and
 // { keys: { mark: [...notes], labels: { note: text } }, caption } draws a
@@ -36,6 +37,15 @@ function randomSeq(pool, count) {
 const noteSteps = (text, extra = {}) =>
   notes(text).map(n => ({ notes: [n], label: pretty(n.name), phrase: n.phrase, ...extra }));
 
+// Same, but black keys named as flats (F major, minor keys)
+const FLAT_NAME = { 'C#': 'D♭', 'D#': 'E♭', 'F#': 'G♭', 'G#': 'A♭', 'A#': 'B♭' };
+const flatSteps = (text, extra = {}) =>
+  notes(text).map(n => ({ notes: [n], label: FLAT_NAME[n.name] ?? n.name, phrase: n.phrase, ...extra }));
+
+// Your keyboard key for each note (middle octave), for the mini-keyboard labels
+const KEY_OF = { C: 'S', 'C#': 'E', D: 'D', 'D#': 'R', E: 'F', F: 'G', 'F#': 'Y', G: 'H', 'G#': 'U', A: 'J', 'A#': 'I', B: 'K' };
+const keyLabels = names => Object.fromEntries(names.map(n => [n, KEY_OF[n]]));
+
 const chordStep = (text, label, extra = {}) => {
   const ns = notes(text);
   return { notes: ns, label, listen: ns, chord: true, ...extra };
@@ -57,18 +67,6 @@ const earLesson = (id, title, theory, config) => ({
   title,
   theory,
   exercise: { type: 'ear', prompt: 'Listen, then press the note you heard', ...config },
-});
-
-const songLesson = (id, songId, theory) => ({
-  id,
-  title: songById[songId].title,
-  theory,
-  exercise: {
-    type: 'steps',
-    hint: 'glow',
-    prompt: 'Play the glowing key',
-    make: () => songById[songId].notes.map(n => ({ notes: [n], label: pretty(n.name), phrase: n.phrase })),
-  },
 });
 
 export const UNITS = [
@@ -407,7 +405,7 @@ export const UNITS = [
         title: 'Your first chord: C major',
         theory: [
           'A **chord** is three or more notes played together. The most common chord is the **triad**: a root note, then a skip, then another skip. Starting on C, that gives **C E G**.',
-          { keys: { mark: ['C', 'E', 'G'], labels: { C: 'A', E: 'D', G: 'J' } }, caption: 'C major chord: A + D + J' },
+          { keys: { mark: ['C', 'E', 'G'], labels: keyLabels(['C', 'E', 'G']) }, caption: 'C major chord: S + F + H' },
           'Press all three keys at the same moment. Major chords sound **bright and happy**.',
           'Pianists also play chords one note at a time. That is called a **broken chord** (or arpeggio).',
         ],
@@ -470,38 +468,425 @@ export const UNITS = [
     ],
   },
   {
-    title: 'Songs',
+    title: 'Scales in depth',
     lessons: [
-      songLesson('song-mary', 'mary', [
-        'Your first real piece! *Mary Had a Little Lamb* uses only **C D E** and **G**, nearly all steps.',
-        { tip: 'Keep your left hand still on `S` `D` `F` and let the fingers do the work.' },
-      ]),
-      songLesson('song-twinkle', 'twinkle', [
-        '*Twinkle Twinkle Little Star* opens with a big skip, **C up to G**, then walks back down by steps.',
-        'Notice the pattern: each line goes down the scale one step at a time. Spotting patterns like this is how pianists memorise music.',
-      ]),
-      songLesson('song-ode', 'ode', [
-        'Beethoven\'s *Ode to Joy* is almost entirely **steps**, which makes it perfect for C position.',
-        { tip: 'Near the end of the third line there is a dip to **low G**. Press `Z` when the hint asks, then `X` to come back.' },
-      ]),
-      songLesson('song-jingle', 'jingle', [
-        '*Jingle Bells* has lots of **repeated notes**. Keep them even, like a steady beat.',
-      ]),
-      songLesson('song-birthday', 'birthday', [
-        '*Happy Birthday* starts **below** middle C, on low G. Press `Z` before you begin.',
-        'It has the biggest jump in the course, an **octave**, on "Happy birthday *dear*...".',
-      ]),
       {
-        id: 'song-twinkle-timed',
-        title: 'Twinkle, in time',
+        id: 'scale-degrees',
+        title: 'Scale degrees',
         theory: [
-          'The final test: play *Twinkle Twinkle* **with rhythm**. Each line is six quarter notes and then a half note at the end. Hold that one for "1-2".',
-          'This puts together everything you have learned: note names, fingers, steps and skips, and steady counting. 🎓',
+          'Every note of a scale has a **number** called its *degree*. In C major: C = 1, D = 2, E = 3, F = 4, G = 5, A = 6, B = 7, and the top C is 8 (or 1 again).',
+          'The most important degrees also have names:',
+          { list: [
+            '**1 · Tonic**: home. Melodies love to end here.',
+            '**4 · Subdominant**: moves away from home.',
+            '**5 · Dominant**: the strongest pull back to 1.',
+            '**7 · Leading note**: a half step below the tonic, so it *leans* up into it.',
+          ] },
+          'You already know these in sargam: **1 = Sa, 2 = Ri, 3 = Ga, 4 = Ma, 5 = Pa, 6 = Da, 7 = Ni**. A degree is just a Western swara number.',
+          { keys: { mark: WHITES, labels: { C: '1', D: '2', E: '3', F: '4', G: '5', A: '6', B: '7' } }, caption: 'C major with degree numbers' },
+          { tip: 'Thinking in numbers rather than letters is what lets musicians play the same tune in any key.' },
         ],
         exercise: {
-          type: 'rhythm',
-          bpm: 84,
-          pattern: 'C C G G | A A G/2 | F F E E | D D C/2 | G G F F | E E D/2 | G G F F | E E D/2 | C C G G | A A G/2 | F F E E | D D C/2',
+          type: 'steps',
+          hint: 'none',
+          make: () => randomSeq([1, 2, 3, 4, 5, 6, 7, 8], 14).map(d => {
+            const n = note(d === 8 ? 'C+' : WHITES[d - 1]);
+            return { notes: [n], label: String(d), prompt: `In C major, play degree **${d}**` };
+          }),
+        },
+      },
+      {
+        id: 'f-major',
+        title: 'The F major scale',
+        theory: [
+          'Start the **W W H W W W H** pattern on **F**. F G A are whole steps, but the 4th note must be only a *half* step above A. So instead of B we need **B♭**.',
+          'F major is the key with **one flat: B♭**. G major had one sharp, and F major has one flat. They are mirror images.',
+          { keys: { mark: ['F', 'G', 'A', 'A#', 'C', 'D', 'E'], labels: { 'A#': 'B♭' } }, caption: 'F major: F G A B♭ C D E F' },
+          'On your keyboard: `G` `H` `J` `I` (B♭), then the high keys `L` `;` `\'` `Enter` for C D E F.',
+          { tip: 'Call it **B♭**, not A♯. In F major every letter appears once (F G A B C D E), so the black key takes the B name.' },
+        ],
+        exercise: { type: 'steps', hint: 'glow', prompt: 'Play F major up and back down', make: () => flatSteps('F G A A# C+ D+ E+ F+ | E+ D+ C+ A# A G F') },
+      },
+      {
+        id: 'd-major',
+        title: 'The D major scale',
+        theory: [
+          'Now start on **D**. Follow **W W H W W W H** and two notes need raising: **F♯** and **C♯**.',
+          'D major has **two sharps**. Notice the new sharp, C♯, is the leading note (degree 7) leaning up into D.',
+          { keys: { mark: ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'] }, caption: 'D major: D E F♯ G A B C♯ D' },
+          'Keys: `D` `F` `Y` (F♯) `H` `J` `K`, then `P` for high C♯ and `;` for high D.',
+        ],
+        exercise: { type: 'steps', hint: 'glow', prompt: 'Play D major up and back down', make: () => noteSteps('D E F# G A B C#+ D+ | C#+ B A G F# E D') },
+      },
+      {
+        id: 'key-signatures',
+        title: 'Key signatures',
+        theory: [
+          'Every major key has its own set of sharps or flats, its **key signature**. Sheet music writes them once at the start of each line instead of on every note.',
+          '**Sharp keys** step up by fifths. Each new key adds one sharp:',
+          { list: ['**C**: none', '**G**: F♯', '**D**: F♯ C♯', '**A**: F♯ C♯ G♯', '**E**: F♯ C♯ G♯ D♯'] },
+          '**Flat keys** step down by fifths. Each new key adds one flat:',
+          { list: ['**F**: B♭', '**B♭**: B♭ E♭', '**E♭**: B♭ E♭ A♭', '**A♭**: B♭ E♭ A♭ D♭'] },
+          'Sharps always arrive in the order **F C G D A E B**, and flats in the reverse order **B E A D G C F**. This loop of keys is called the **circle of fifths**.',
+          { tip: 'Quick trick: the last sharp is the leading note. In A major the last sharp is G♯, one half step below A.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'none',
+          make: () => [
+            ['G major', 'F#'], ['D major', 'F# C#'], ['A major', 'F# C# G#'],
+            ['F major', 'A#'], ['B♭ major', 'A# D#'], ['E♭ major', 'A# D# G#'],
+          ].flatMap(([key, acc], phrase) => {
+            const flat = key.startsWith('F') || key.includes('♭');
+            const kind = flat ? 'flats' : 'sharps';
+            return (flat ? flatSteps(acc) : noteSteps(acc)).map((st, i) => ({
+              ...st, phrase, prompt: `**${key}**: play its ${kind} in order (${i + 1} of ${acc.split(' ').length})`,
+            }));
+          }),
+        },
+      },
+      {
+        id: 'natural-minor',
+        title: 'The natural minor scale',
+        theory: [
+          'The **minor scale** has a darker, sadder sound. Its step pattern is **W H W W H W W**.',
+          'Compare **C major** and **C minor**. Three notes drop a half step: **E → E♭, A → A♭, B → B♭**. The lowered 3rd (E♭) is what makes it sound minor.',
+          { keys: { mark: ['C', 'D', 'D#', 'F', 'G', 'G#', 'A#'], labels: { 'D#': 'E♭', 'G#': 'A♭', 'A#': 'B♭' } }, caption: 'C minor: C D E♭ F G A♭ B♭ C' },
+          'On your keyboard: `S` `D` `R` `G` `H` `U` `I` `L`.',
+          'In sargam it is **Sa Ri Ga2 Ma Pa Da1 Ni2**, the raga **Natabhairavi**.',
+        ],
+        exercise: { type: 'steps', hint: 'glow', prompt: 'Play C minor up and back down', make: () => flatSteps('C D D# F G G# A# C+ | A# G# G F D# D C') },
+      },
+      {
+        id: 'relative-minor',
+        title: 'Relative minor',
+        theory: [
+          'Every major key has a **relative minor** that uses *exactly the same notes*. It just treats a different note as home: the **6th degree**.',
+          { list: ['**C major** → **A minor**: all white keys', '**F major** → **D minor**: one flat, B♭', '**G major** → **E minor**: one sharp, F♯'] },
+          'Same keys, different home, different mood. When D is home the B♭ sounds sad, but when F is home the same note sounds bright.',
+          { keys: { mark: ['D', 'E', 'F', 'G', 'A', 'A#', 'C'], labels: { 'A#': 'B♭' } }, caption: 'D minor: D E F G A B♭ C D (the notes of F major)' },
+          'First play **F major** from F, then **D minor** from D, and listen to how the home note changes the feeling.',
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            ...flatSteps('F G A A# C+ D+ E+ F+', { prompt: '**F major**: bright, home is F' }),
+            ...flatSteps('D E F G A A# C+ D+', { prompt: '**D minor**: same notes, home is D', phrase: 1 }),
+            ...flatSteps('C+ A# A G F E D', { prompt: 'Back down to D', phrase: 2 }),
+          ],
+        },
+      },
+      {
+        id: 'harmonic-minor',
+        title: 'The harmonic minor scale',
+        theory: [
+          'In natural minor the 7th note (B♭ in C minor) sits a *whole* step below home, so it doesn\'t pull home strongly. **Harmonic minor raises the 7th** back to B, a half step below C.',
+          'This creates a wide gap of **three half steps** between A♭ and B. That gap gives harmonic minor its exotic, Middle-Eastern flavour.',
+          { keys: { mark: ['C', 'D', 'D#', 'F', 'G', 'G#', 'B'], labels: { 'D#': 'E♭', 'G#': 'A♭' } }, caption: 'C harmonic minor: C D E♭ F G A♭ B C' },
+          'Keys: `S` `D` `R` `G` `H` `U` `K` `L`. Feel the stretch from `U` to `K`.',
+          'Carnatic twin: **Kiravani**, Sa Ri Ga2 Ma Pa Da1 Ni.',
+        ],
+        exercise: { type: 'steps', hint: 'glow', prompt: 'Play C harmonic minor up and back down', make: () => flatSteps('C D D# F G G# B C+ | B G# G F D# D C') },
+      },
+      {
+        id: 'melodic-minor',
+        title: 'The melodic minor scale',
+        theory: [
+          'Singers found the A♭–B gap awkward, so **melodic minor** smooths it out by raising *both* the 6th and the 7th **on the way up**: C D E♭ F G **A B** C.',
+          'On the way **down** it returns to natural minor: C B♭ A♭ G F E♭ D C.',
+          { keys: { mark: ['C', 'D', 'D#', 'F', 'G', 'A', 'B'], labels: { 'D#': 'E♭' } }, caption: 'C melodic minor going up: only the 3rd is lowered' },
+          { tip: 'Going up it is just C major with a minor 3rd. Going down it is plain C minor.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            ...flatSteps('C D D# F G A B C+', { prompt: 'Up: raised 6th and 7th' }),
+            ...flatSteps('A# G# G F D# D C', { prompt: 'Down: natural minor', phrase: 1 }),
+          ],
+        },
+      },
+      {
+        id: 'pentatonic',
+        title: 'Pentatonic scales',
+        theory: [
+          '**Penta** means five. A pentatonic scale leaves out the two notes most likely to clash, so almost anything you play on it sounds good. It is used in folk songs, blues and rock solos.',
+          '**Major pentatonic** = degrees 1 2 3 5 6, which is **C D E G A**. That is raga **Mohanam** (Sa Ri Ga Pa Da)!',
+          { keys: { mark: ['C', 'D', 'E', 'G', 'A'], labels: keyLabels(['C', 'D', 'E', 'G', 'A']) }, caption: 'C major pentatonic' },
+          '**Minor pentatonic** = degrees 1 ♭3 4 5 ♭7, which is **C E♭ F G B♭**: the classic blues and rock sound. It is the raga **Suddha Dhanyasi** (Sa Ga2 Ma Pa Ni2).',
+          { keys: { mark: ['C', 'D#', 'F', 'G', 'A#'], labels: { 'D#': 'E♭', 'A#': 'B♭' } }, caption: 'C minor pentatonic' },
+          { tip: 'After the lesson, improvise freely on the major pentatonic. No note can sound wrong.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            ...noteSteps('C D E G A C+ | A G E D C', { prompt: '**Major pentatonic** (Mohanam)' }),
+            ...flatSteps('C D# F G A# C+', { prompt: '**Minor pentatonic** (bluesy)', phrase: 2 }),
+            ...flatSteps('A# G F D# C', { prompt: '**Minor pentatonic** back down', phrase: 3 }),
+          ],
+        },
+      },
+      {
+        id: 'chromatic',
+        title: 'The chromatic scale',
+        theory: [
+          'The **chromatic scale** uses **all twelve notes**, every key black and white, each a half step apart.',
+          'It isn\'t in a key, it is the whole palette. Composers use pieces of it to slide smoothly between notes.',
+          { keys: { mark: ALL_TWELVE }, caption: 'All 12 notes: the chromatic scale' },
+          'On your keyboard it zig-zags between the two rows: `S` `E` `D` `R` `F` `G` `Y` `H` `U` `J` `I` `K` `L`.',
+          { tip: 'Going up, name the black keys as sharps. Going down, name them as flats.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            ...noteSteps('C C# D D# E F F# G G# A A# B C+', { prompt: 'Up by half steps (sharps)' }),
+            ...flatSteps('B A# A G# G F# F E D# D C# C', { prompt: 'Down by half steps (flats)', phrase: 1 }),
+          ],
+        },
+      },
+    ],
+  },
+  {
+    title: 'Chords in depth',
+    lessons: [
+      {
+        id: 'chord-qualities',
+        title: 'The four triads',
+        theory: [
+          'Every triad is two intervals stacked up. Count the **half steps** between notes and you can build any chord:',
+          { list: [
+            '**Major** = 4 + 3 → C E G (bright)',
+            '**Minor** = 3 + 4 → C E♭ G (sad)',
+            '**Diminished** = 3 + 3 → C E♭ G♭ (tense, spooky)',
+            '**Augmented** = 4 + 4 → C E G♯ (dreamy, unresolved)',
+          ] },
+          { keys: { mark: ['C', 'D#', 'F#'], labels: { 'D#': 'E♭', 'F#': 'G♭' } }, caption: 'C diminished: both gaps are 3 half steps' },
+          'Use **Hear it** on each chord. Train your ear to tell the four moods apart.',
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [0, 1].flatMap(round => [
+            chordStep('C E G', 'C', { prompt: '**Major**: 4 + 3', phrase: round }),
+            chordStep('C D# G', 'Cm', { prompt: '**Minor**: 3 + 4', phrase: round }),
+            chordStep('C D# F#', 'C°', { prompt: '**Diminished**: 3 + 3', phrase: round }),
+            chordStep('C E G#', 'Caug', { prompt: '**Augmented**: 4 + 4', phrase: round }),
+          ]),
+        },
+      },
+      {
+        id: 'build-triads',
+        title: 'Build any triad',
+        theory: [
+          'Now build chords on other roots using the half-step counts. **Major = 4 + 3, minor = 3 + 4.**',
+          'Example, **D major**: start on D, count 4 half steps up (D♯ E F **F♯**), then 3 more (G G♯ **A**). Result: **D F♯ A**.',
+          { keys: { mark: ['D', 'F#', 'A'] }, caption: 'D major: D F♯ A' },
+          { tip: 'Shortcut: build it on white keys first (every other key). On **D, E and A** that gives a *minor* chord, so raise the middle note for major. On **C, F and G** it gives a *major* chord, so lower the middle note for minor.' },
+          'This time the keys **don\'t glow**. Work them out yourself. After two mistakes the answer lights up.',
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'none',
+          make: () => [
+            ['D F# A', 'D'], ['D F A', 'Dm'], ['E G# B', 'E'], ['E G B', 'Em'],
+            ['G B D+', 'G'], ['G A# D+', 'Gm'], ['A C#+ E+', 'A'], ['A C+ E+', 'Am'],
+            ['F A C+', 'F'], ['F G# C+', 'Fm'],
+          ].map(([text, label], i) => chordStep(text, label, {
+            prompt: `Build **${label.replace('m', ' minor').replace(/^([A-G])$/, '$1 major')}**`, phrase: Math.floor(i / 2),
+          })),
+        },
+      },
+      {
+        id: 'diatonic-triads',
+        title: 'Chords of the scale',
+        theory: [
+          'Build a triad on **every note of C major**, using only white keys, and you get seven chords. These are the chords that "belong" to the key:',
+          { list: ['**I** C · **ii** Dm · **iii** Em · **IV** F · **V** G · **vi** Am · **vii°** B°'] },
+          'Capital Roman numerals are major and small ones are minor. ° means diminished. The pattern **major, minor, minor, major, major, minor, diminished** is the same in *every* major key.',
+          { keys: { mark: ['D', 'F', 'A'], labels: keyLabels(['D', 'F', 'A']) }, caption: 'ii = D minor: D F A' },
+          'Your hand keeps the same shape (every other white key) and simply walks up the keyboard.',
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            chordStep('C E G', 'I', { prompt: '**I**: C major' }),
+            chordStep('D F A', 'ii', { prompt: '**ii**: D minor' }),
+            chordStep('E G B', 'iii', { prompt: '**iii**: E minor' }),
+            chordStep('F A C+', 'IV', { prompt: '**IV**: F major' }),
+            chordStep('G B D+', 'V', { prompt: '**V**: G major' }),
+            chordStep('A C+ E+', 'vi', { prompt: '**vi**: A minor' }),
+            chordStep('B D+ F+', 'vii°', { prompt: '**vii°**: B diminished' }),
+            chordStep('A C+ E+', 'vi', { prompt: 'Back down: **vi**', phrase: 1 }),
+            chordStep('F A C+', 'IV', { prompt: '**IV**', phrase: 1 }),
+            chordStep('G B D+', 'V', { prompt: '**V**', phrase: 1 }),
+            chordStep('C E G', 'I', { prompt: 'Home: **I**', phrase: 1 }),
+          ],
+        },
+      },
+      {
+        id: 'inversions',
+        title: 'Inversions',
+        theory: [
+          'An **inversion** keeps the same three notes but puts a different one at the bottom:',
+          { list: [
+            '**Root position**: C E G (root at the bottom)',
+            '**1st inversion**: E G C (the 3rd at the bottom)',
+            '**2nd inversion**: G C E (the 5th at the bottom)',
+          ] },
+          'It is still a C chord, just a different *colour*. Pianists choose inversions so the hand moves as little as possible between chords.',
+          { keys: { mark: ['E', 'G', 'C'], labels: { C: 'C (top)' } }, caption: '1st inversion: E G + the high C' },
+          { tip: 'To find the next inversion, take the bottom note and move it up an octave.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            chordStep('C E G', 'C', { prompt: '**C** root position' }),
+            chordStep('E G C+', 'C/E', { prompt: '**C** 1st inversion' }),
+            chordStep('G C+ E+', 'C/G', { prompt: '**C** 2nd inversion' }),
+            chordStep('F A C+', 'F', { prompt: '**F** root position', phrase: 1 }),
+            chordStep('A C+ F+', 'F/A', { prompt: '**F** 1st inversion', phrase: 1 }),
+            chordStep('C F A', 'F/C', { prompt: '**F** 2nd inversion', phrase: 1 }),
+            chordStep('A C+ E+', 'Am', { prompt: '**Am** root position', phrase: 2 }),
+            chordStep('C E A', 'Am/C', { prompt: '**Am** 1st inversion', phrase: 2 }),
+            chordStep('E A C+', 'Am/E', { prompt: '**Am** 2nd inversion', phrase: 2 }),
+          ],
+        },
+      },
+      {
+        id: 'sus-chords',
+        title: 'Suspended chords',
+        theory: [
+          'Take away the 3rd of a chord and replace it with a neighbour. The chord now sounds **open and undecided**, neither major nor minor. That is a **sus** (suspended) chord.',
+          { list: ['**Csus2** = C **D** G (3rd lowered to the 2nd)', '**Csus4** = C **F** G (3rd raised to the 4th)'] },
+          'A sus4 *wants* to fall back to the 3rd. Hear the tension release as you go **Csus4 → C**.',
+          { keys: { mark: ['C', 'F', 'G'], labels: keyLabels(['C', 'F', 'G']) }, caption: 'Csus4: S + G + H' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [0, 1].flatMap(round => [
+            chordStep('C F G', 'Csus4', { prompt: '**Csus4**: tension…', phrase: round }),
+            chordStep('C E G', 'C', { prompt: '…release to **C**', phrase: round }),
+            chordStep('C D G', 'Csus2', { prompt: '**Csus2**: open, airy', phrase: round }),
+            chordStep('C E G', 'C', { prompt: 'and back to **C**', phrase: round }),
+          ]).concat([
+            chordStep('G C+ D+', 'Gsus4', { prompt: '**Gsus4**', phrase: 2 }),
+            chordStep('G B D+', 'G', { prompt: 'resolves to **G**', phrase: 2 }),
+          ]),
+        },
+      },
+      {
+        id: 'seventh-chords',
+        title: 'Seventh chords',
+        theory: [
+          'Stack **one more third** on a triad and you get a four-note **seventh chord**. Sevenths add richness: jazz, soul and R&B are full of them.',
+          { list: [
+            '**Cmaj7** = C E G **B**: dreamy, soft',
+            '**C7** (dominant 7th) = C E G **B♭**: bluesy, wants to move',
+            '**Cm7** = C E♭ G **B♭**: mellow, smooth',
+            '**G7** = G B D **F**: the V7 chord, pulls strongly home to C',
+          ] },
+          { keys: { mark: ['C', 'E', 'G', 'B'], labels: keyLabels(['C', 'E', 'G', 'B']) }, caption: 'Cmaj7: S + F + H + K' },
+          { tip: 'Four fingers now: left pinky on the root, then every other key. If a chord doesn\'t register, your keyboard may not detect that many keys at once. Press them slightly one after another and hold.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            chordStep('C E G B', 'Cmaj7', { prompt: '**Cmaj7**: dreamy' }),
+            chordStep('C E G A#', 'C7', { prompt: '**C7**: bluesy (B drops to B♭)' }),
+            chordStep('C D# G A#', 'Cm7', { prompt: '**Cm7**: mellow (E drops to E♭ too)' }),
+            chordStep('G B D+ F+', 'G7', { prompt: '**G7**: the dominant seventh', phrase: 1 }),
+            chordStep('C E G', 'C', { prompt: '…resolving home to **C**', phrase: 1 }),
+            chordStep('C E G B', 'Cmaj7', { prompt: 'Finish on **Cmaj7**', phrase: 1 }),
+          ],
+        },
+      },
+      {
+        id: 'pop-progression',
+        title: 'The pop progression: I – V – vi – IV',
+        theory: [
+          '**C – G – Am – F** (I – V – vi – IV) is the most famous chord loop in pop music. It is used in hundreds of hit songs.',
+          'With smart inversions your hand barely moves, because the chords share notes:',
+          { list: ['**C** = C E G', '**G** = D G B (2nd inversion)', '**Am** = C E A (1st inversion)', '**F** = C F A (2nd inversion)'] },
+          { keys: { mark: ['D', 'G', 'B'], labels: keyLabels(['D', 'G', 'B']) }, caption: 'G as D G B: D + H + K' },
+          { tip: 'Loop it and hum any melody on top. You will recognise songs!' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [0, 1, 2].flatMap(round => [
+            chordStep('C E G', 'C', { prompt: '**I**: C', phrase: round }),
+            chordStep('D G B', 'G', { prompt: '**V**: G', phrase: round }),
+            chordStep('C E A', 'Am', { prompt: '**vi**: Am', phrase: round }),
+            chordStep('C F A', 'F', { prompt: '**IV**: F', phrase: round }),
+          ]),
+        },
+      },
+      {
+        id: 'minor-progression',
+        title: 'A minor-key progression',
+        theory: [
+          'Minor keys have their own chords. In **C minor**: **i** = Cm, **iv** = Fm, and **V** = G major.',
+          'Why is V *major* in a minor key? It borrows the raised 7th from **harmonic minor** (B instead of B♭). That B is the leading note, and it pulls strongly back to C.',
+          { list: ['**Cm** = C E♭ G', '**Fm** = C F A♭ (2nd inversion)', '**G** = D G B (2nd inversion)', 'back to **Cm**'] },
+          { keys: { mark: ['C', 'F', 'G#'], labels: { 'G#': 'A♭' } }, caption: 'Fm as C F A♭' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [0, 1].flatMap(round => [
+            chordStep('C D# G', 'Cm', { prompt: '**i**: C minor', phrase: round }),
+            chordStep('C F G#', 'Fm', { prompt: '**iv**: F minor', phrase: round }),
+            chordStep('D G B', 'G', { prompt: '**V**: G major (from harmonic minor)', phrase: round }),
+            chordStep('C D# G', 'Cm', { prompt: '**i**: home to C minor', phrase: round }),
+          ]),
+        },
+      },
+      {
+        id: 'ii-v-i',
+        title: 'Jazz ii – V – I',
+        theory: [
+          'The favourite move in jazz is **ii – V – I** with seventh chords: **Dm7 → G7 → Cmaj7**.',
+          'Voice-leading makes it smooth: each chord changes only one or two notes.',
+          { list: ['**Dm7** = D F A C', '**G7** = D F G B (inversion: only A→G and C→B move)', '**Cmaj7** = C E G B (D→C and F→E move down)'] },
+          { keys: { mark: ['D', 'F', 'G', 'B'], labels: keyLabels(['D', 'F', 'G', 'B']) }, caption: 'G7 as D F G B' },
+          { tip: 'Notice each finger slides down by a step or stays still. That is good voice-leading.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [0, 1].flatMap(round => [
+            chordStep('D F A C+', 'Dm7', { prompt: '**ii**: Dm7', phrase: round }),
+            chordStep('D F G B', 'G7', { prompt: '**V**: G7', phrase: round }),
+            chordStep('C E G B', 'Cmaj7', { prompt: '**I**: Cmaj7', phrase: round }),
+          ]),
+        },
+      },
+      {
+        id: 'arpeggios',
+        title: 'Arpeggios',
+        theory: [
+          'An **arpeggio** is a chord spread out one note at a time, up and down. Pianists use arpeggios for flowing accompaniments, and they train your hand to *know* each chord shape.',
+          'Play each chord as an arpeggio through two octaves of notes: **root, 3rd, 5th, root**, then back down.',
+          { list: ['**C**: C E G C', '**Am**: A C E (high)', '**F**: F A C F (high)', '**G7**: G B D F'] },
+          { tip: 'Keep it even, like a music box. Then try the same thing freely with the sustain pedal (Space) held down.' },
+        ],
+        exercise: {
+          type: 'steps',
+          hint: 'glow',
+          make: () => [
+            ...noteSteps('C E G C+ E+ C+ G E C', { prompt: '**C** arpeggio' }),
+            ...noteSteps('A C+ E+ C+ A', { prompt: '**Am** arpeggio', phrase: 1 }),
+            ...noteSteps('F A C+ F+ C+ A F', { prompt: '**F** arpeggio', phrase: 2 }),
+            ...noteSteps('G B D+ F+ D+ B G', { prompt: '**G7** arpeggio', phrase: 3 }),
+            ...noteSteps('E G C+', { prompt: 'Home to **C**', phrase: 4 }),
+          ],
         },
       },
     ],
