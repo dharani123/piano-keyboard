@@ -17,7 +17,7 @@ import FallingNotes, { FallSpace, FALL_HEIGHT, PX_PER_SECOND, codeFor } from './
 
 const RAGA_KEY = 'desk-piano-raga';
 const VIEW_MARGIN = 20; // px left below the Relax card when Carry on scrolls to it
-const BREATHER = 15; // seconds of break between exercises, counted down on screen
+const BREATHER = 10; // seconds of break between exercises, counted down on screen
 const LOOKAHEAD = 1.5; // seconds of the app's notes created ahead of time
 const FEED_EVERY = 200; // ms between topping up (hidden tabs slow this to ~1 s, still inside the lookahead)
 
@@ -65,7 +65,7 @@ export default function RelaxMode({ piano, modeSwitch }) {
   // an exercise that needs notes off the home row slides the keys two places for the whole exercise
   const layout = line.layout;
   useEffect(() => { piano.setLayout(layout); }, [layout]);
-  useEffect(() => () => pianoRef.current.setLayout(0), []);
+  useEffect(() => () => pianoRef.current.setLayout(null), []);
 
   // demo: the app is playing these keys, so show them held down instead of as targets
   function light(codes, demo = false) {

@@ -68,7 +68,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
   // an exercise that needs notes off the home row slides the keys two places while it's picked
   const layout = song.layout ?? 0;
   useEffect(() => { piano.setLayout(layout); }, [layout]);
-  useEffect(() => () => pianoRef.current.setLayout(0), []);
+  useEffect(() => () => pianoRef.current.setLayout(null), []);
 
   // Carnatic exercises open in order, like a teacher: pass one (★★, or finish it in Relax) to open the next
   const passed = id => isPassed(best, id);

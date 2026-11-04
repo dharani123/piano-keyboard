@@ -1,17 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { engine } from '../../audio/engine.js';
 import { frequency } from '../../audio/pitch.js';
-import { bySemitone } from '../../data/keymap.js';
+import { codeAt, keyAt } from '../../data/keymap.js';
 import { parseRhythm, totalBeats, scoreRhythm, starsForAccuracy } from '../../lessons/rhythm.js';
 import Staff from '../sheet/Staff.jsx';
 
 const COUNT_IN = 4;
 const DEFAULT_BEATS_PER_BAR = 4;
+// Practice speeds (share of the written tempo); remembered across exercises
+const SPEEDS = [0.5, 0.75, 1];
+const SPEED_KEY = 'desk-piano-rhythm-speed';
+function loadSpeed() {
+  try { const v = Number(localStorage.getItem(SPEED_KEY)); return SPEEDS.includes(v) ? v : 1; } catch { return 1; }
+}
 
 export default function RhythmExercise({ exercise, piano, onProgress, onComplete }) {
   const events = useMemo(() => parseRhythm(exercise.pattern), [exercise.pattern]);
   const total = totalBeats(events);
-  const spb = 60 / exercise.bpm;
+  const [speed, setSpeedState] = useState(loadSpeed);
+  const setSpeed = v => {
+    setSpeedState(v);
+    try { localStorage.setItem(SPEED_KEY, String(v)); } catch { /* storage blocked */ }
+  };
+  const bpm = Math.round(exercise.bpm * speed);
+  const spb = 60 / bpm;
   const BEATS_PER_BAR = exercise.beatsPerBar ?? DEFAULT_BEATS_PER_BAR;
   const [mode, setMode] = useState('ready'); // ready | demo | play
   const [beat, setBeat] = useState(null);
@@ -34,7 +46,7 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
     run.current = null;
   }
   useEffect(() => stop, []);
-  useEffect(() => { onProgress(`${exercise.bpm} BPM`); }, []);
+  useEffect(() => { onProgress(`${bpm} BPM`); }, [bpm]);
 
   useEffect(() => piano.subscribe(e => {
     const r = run.current;
@@ -69,7 +81,7 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
       const target = r.mode === 'demo'
         ? events.find(e => !e.rest && b >= e.beat && b < e.beat + e.beats * 0.9)
         : events.find(e => !e.rest && b < e.beat + Math.min(e.beats, 1) * 0.5);
-      light(target ? bySemitone[target.semitone].code : null);
+      light(target ? codeAt(target.semitone, 0, pianoRef.current.layout) : null);
       if (b > total + 0.6) return finish(r);
       frame.current = requestAnimationFrame(tick);
     };
@@ -80,7 +92,7 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
     stop();
     setMode('ready');
     setBeat(null);
-    onProgress(`${exercise.bpm} BPM`);
+    onProgress(`${bpm} BPM`);
     if (r.mode !== 'play') return;
     const score = scoreRhythm(events, r.presses, spb, r.base);
     const count = grade => score.results.filter(x => x.grade === grade).length;
@@ -98,7 +110,7 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
   return (
     <div className="exercise">
       <div className="prompt">
-        {mode === 'ready' && <>Tempo {exercise.bpm} BPM: listen first, then play along</>}
+        {mode === 'ready' && <>Tempo {bpm} BPM{speed !== 1 && <> ({speed * 100}% of {exercise.bpm})</>}: listen first, then play along</>}
         {mode === 'demo' && <>Listen and watch the keys…</>}
         {mode === 'play' && (counting ? <>Get ready… <span className="count">{COUNT_IN + Math.floor(beat) + 1}</span></> : <>Play!</>)}
       </div>
@@ -106,8 +118,16 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
         <button onClick={() => begin('demo')} disabled={mode !== 'ready'}>🔊 Listen first</button>
         <button className="primary" onClick={() => begin('play')} disabled={mode !== 'ready'}>▶ Start</button>
         {mode !== 'ready' && <button onClick={() => { stop(); setMode('ready'); setBeat(null); }}>Stop</button>}
+        <span className="rhythm-speed">
+          Speed
+          {SPEEDS.map(v => (
+            <button key={v} className={speed === v ? 'active' : ''} disabled={mode !== 'ready'} onClick={() => setSpeed(v)}>
+              {v * 100}%
+            </button>
+          ))}
+        </span>
       </div>
-      {exercise.staff && <Staff {...exercise.staff} scale={1.6} />}
+      {exercise.staff && <Staff {...exercise.staff} scale={1.6} playhead={beat !== null && beat >= 0 ? beat : null} />}
       {!exercise.hideLane && <div className="lane">
         {Array.from({ length: bars - 1 }, (_, i) => (
           <div key={i} className="barline" style={{ left: `${((i + 1) * BEATS_PER_BAR / total) * 100}%` }} />
@@ -118,7 +138,7 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
             className={'lane-note' + (e.rest ? ' rest' : '')}
             style={{ left: `${(e.beat / total) * 100}%`, width: `calc(${(e.beats / total) * 100}% - 3px)` }}
           >
-            {e.rest ? '𝄽' : <><b>{e.name.replace('#', '♯')}</b><small>{bySemitone[e.semitone].key}</small></>}
+            {e.rest ? '𝄽' : <><b>{e.name.replace('#', '♯')}</b><small>{keyAt(e.semitone, 0, piano.layout)?.key}</small></>}
           </div>
         ))}
         {beat !== null && beat >= 0 && <div className="playhead" style={{ left: `${Math.min(beat / total, 1) * 100}%` }} />}

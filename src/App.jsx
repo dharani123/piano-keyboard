@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { engine } from './audio/engine.js';
 import { frequency } from './audio/pitch.js';
 import { INSTRUMENTS } from './audio/instruments.js';
-import { keyForCode, MIN_OCTAVE, MAX_OCTAVE, MAX_TRANSPOSE } from './data/keymap.js';
+import { keyForCode, MIN_OCTAVE, MAX_OCTAVE, MAX_TRANSPOSE, MIN_SHIFT, MAX_SHIFT } from './data/keymap.js';
+import { dChordThird } from './data/dChord.js';
 import { useKeyboard } from './hooks/useKeyboard.js';
 import Piano from './components/Piano.jsx';
 import Display from './components/Display.jsx';
@@ -15,6 +16,10 @@ import { SIZE_MODES, loadSizeMode, saveSizeMode } from './data/pianoSize.js';
 
 // Shown on the display instead of the usual message while the browser holds the sound back
 const AUDIO_MESSAGES = { suspended: 'SOUND PAUSED - CLICK ANYWHERE', stuck: 'SOUND STUCK - RESTARTING' };
+// The player's keyboard can't register D + Y + J at once: two D major notes pressed
+// this close together (ms) play the third too. Slower than this is a melody, not a chord.
+const CHORD_WINDOW_MS = 120;
+const CHORD_FILL_ID = 'd-chord-fill';
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // Transpose is switched off for now (user's call): the control stays visible but
@@ -37,7 +42,13 @@ export default function App() {
   const [lessonSlot, setLessonSlot] = useState(null); // element under the piano where exercises render
   const [fallSlot, setFallSlot] = useState(null); // element above the piano where song notes fall
   const [playSlot, setPlaySlot] = useState(null); // spot in the voice panel for a spare Start/Stop button
-  const [layout, setLayout] = useState(0); // keyboard layout shift: 0, +2 (low notes) or -2 (high), see keymap.js
+  // Keyboard layout shift (see keymap.js): the player's own Shift −/+ choice, unless a song tab
+  // has set the layout it needs (songLayout, null when no song tab is open)
+  const [userShift, setUserShift] = useState(() => {
+    try { return clamp(parseInt(localStorage.getItem('desk-piano-shift'), 10) || 0, MIN_SHIFT, MAX_SHIFT); } catch { return 0; }
+  });
+  const [songLayout, setSongLayout] = useState(null);
+  const layout = songLayout ?? userShift;
   const [audioStatus, setAudioStatus] = useState(() => engine.status());
   const [colourMode, setColourMode] = useState(loadColourMode);
   const [sizeMode, setSizeMode] = useState(loadSizeMode);
@@ -47,6 +58,7 @@ export default function App() {
   // synchronous copy (code -> { semitone, octave }), so key + mouse can't double-trigger
   const heldRef = useRef(new Map());
   const listeners = useRef(new Set());
+  const chordFillOn = useRef(false); // the third note of a D major chord is sounding
 
   // Lessons listen to every note played; returns an unsubscribe function
   const subscribe = useCallback(fn => {
@@ -60,6 +72,9 @@ export default function App() {
   // A key held across a layout change would never get its key-up note
   useEffect(() => releaseAll(), [layout]);
   useEffect(() => engine.onStatus(setAudioStatus), []);
+  useEffect(() => {
+    try { localStorage.setItem('desk-piano-shift', String(userShift)); } catch { /* storage blocked */ }
+  }, [userShift]);
   useEffect(() => saveColourMode(colourMode), [colourMode]);
   useEffect(() => {
     saveSizeMode(sizeMode);
@@ -78,11 +93,21 @@ export default function App() {
     const k = keyForCode(code, layout);
     if (!k) return; // a key this layout doesn't use
     const oct = octave + (k.octaveUp ?? 0);
-    heldRef.current.set(code, { semitone: k.semitone, octave: oct });
+    const pressedAt = performance.now();
+    const earlier = [...heldRef.current.values()];
+    heldRef.current.set(code, { semitone: k.semitone, octave: oct, pressedAt });
     setPressed(new Set(heldRef.current.keys()));
     engine.noteOn(code, frequency(oct, k.semitone, transpose), INSTRUMENTS[voiceIndex].id);
     setLastNote(k.note + oct);
-    const event = { semitone: k.semitone, octave: oct, code, time: engine.now(), held: [...heldRef.current.values()] };
+    stopChordFill(); // a third key got through after all, so the real note takes over
+    const third = earlier.length === 1 && pressedAt - earlier[0].pressedAt <= CHORD_WINDOW_MS
+      ? dChordThird(earlier[0], { semitone: k.semitone, octave: oct })
+      : null;
+    if (third) {
+      engine.noteOn(CHORD_FILL_ID, frequency(third.octave, third.semitone, transpose), INSTRUMENTS[voiceIndex].id);
+      chordFillOn.current = true;
+    }
+    const event = { semitone: k.semitone, octave: oct, code, time: engine.now(), held: [...heldRef.current.values()], chordFilled: !!third };
     for (const fn of listeners.current) fn(event);
   }
 
@@ -90,9 +115,17 @@ export default function App() {
     if (!heldRef.current.delete(code)) return;
     setPressed(new Set(heldRef.current.keys()));
     engine.noteOff(code);
+    stopChordFill();
+  }
+
+  function stopChordFill() {
+    if (!chordFillOn.current) return;
+    chordFillOn.current = false;
+    engine.noteOff(CHORD_FILL_ID);
   }
 
   function releaseAll() {
+    chordFillOn.current = false;
     heldRef.current.clear();
     setPressed(new Set());
     setSpaceHeld(false);
@@ -131,7 +164,8 @@ export default function App() {
     slot: lessonSlot,
     fallSlot,
     playSlot,
-    setLayout,
+    setLayout: setSongLayout,
+    layout,
     // keys held right now, as { semitone, octave }
     getHeld: () => [...heldRef.current.values()],
   };
@@ -164,6 +198,9 @@ export default function App() {
             transpose={transpose}
             onTranspose={shiftTranspose}
             transposeDisabled={!TRANSPOSE_ENABLED}
+            shift={layout}
+            onShift={d => setUserShift(s => clamp(s + d, MIN_SHIFT, MAX_SHIFT))}
+            shiftDisabled={songLayout !== null}
             pedalLatched={pedalLatched}
             sustainOn={sustainOn}
             onPedal={() => setPedalLatched(l => !l)}

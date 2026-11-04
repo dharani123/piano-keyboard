@@ -6,7 +6,16 @@
 const PREFIX = 'desk-piano-';
 // Imported songs stay in this browser only: they can be transcriptions of
 // copyrighted recordings, and the repo is public.
-const BROWSER_ONLY = ['desk-piano-my-songs'];
+// Where you were in the app stays here too: it changes on every click, and the file wins
+// on load, so a reload right after a click would otherwise jump back to the old place.
+const BROWSER_ONLY = [
+  'desk-piano-my-songs',
+  'desk-piano-tab',
+  'desk-piano-open-lesson',
+  'desk-piano-open-lesson-unit',
+  'desk-piano-open-sheet-lesson',
+  'desk-piano-open-sheet-lesson-unit',
+];
 const synced = key => key.startsWith(PREFIX) && !BROWSER_ONLY.includes(key);
 const URL = '/__progress';
 

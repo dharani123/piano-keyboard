@@ -1,8 +1,12 @@
+import { keyAt } from '../data/keymap.js';
+import { isDMajor } from '../data/dChord.js';
 // Pure state machine for "press the right key(s)" exercises: note drills,
 // patterns, ear training, chords and songs.
 //
 // A step is { notes: [{ semitone, oct }], label, ... }. One note = press it;
 // several notes = a chord, complete once all of them are held together.
+// D major is the exception: any two of its notes complete it (the player's keyboard
+// can't register all three), and the app plays the rest, reported in state.filled.
 // `baseOctave` is the octave the exercise started in; each note's `oct` is
 // relative to it.
 
@@ -18,8 +22,10 @@ export function stepReducer(state, action) {
     case 'press': {
       if (state.status !== 'playing') return state;
       const targets = state.steps[state.index].notes;
-      const { semitone, octave, code, held = [] } = action;
+      const { semitone, octave, code, held = [], chordFilled = false } = action;
       if (!targets.some(t => sameNote(state, t, semitone, octave))) {
+        // the third key of a D major chord, arriving after the chord already counted
+        if (state.grace?.some(t => sameNote(state, t, semitone, octave))) return state;
         return {
           ...state,
           mistakes: state.mistakes + 1,
@@ -27,15 +33,20 @@ export function stepReducer(state, action) {
           wrong: { code, n: (state.wrong?.n ?? 0) + 1 },
         };
       }
-      const allHeld = targets.every(t =>
+      const isHeld = t =>
         (t.semitone === semitone && state.baseOctave + t.oct === octave) ||
-        held.some(h => sameNote(state, t, h.semitone, h.octave))
-      );
-      if (!allHeld) return state; // part of a chord, keep going
+        held.some(h => sameNote(state, t, h.semitone, h.octave));
+      const anyTwo = isDMajor(targets);
+      const heldCount = targets.filter(isHeld).length;
+      if (heldCount < (anyTwo ? 2 : targets.length)) return state; // part of a chord, keep going
+      const missing = targets.filter(t => !isHeld(t));
       const index = state.index + 1;
       return {
         ...state,
         index,
+        grace: anyTwo ? targets : null,
+        // notes still to play for you (chordFilled = App already played them with the keypress)
+        filled: missing.length && !chordFilled ? { notes: missing, n: (state.filled?.n ?? 0) + 1 } : state.filled,
         status: index >= state.steps.length ? 'done' : 'playing',
         stepMistakes: 0,
         wrong: null,
@@ -53,12 +64,12 @@ export function currentStep(state) {
 }
 
 // How many octaves the player needs to shift before the next step (+ = up)
-export function octaveShiftNeeded(state, octave) {
+// (none when every note already has a key in this layout, e.g. L ; ' Enter = C–F one octave up)
+export function octaveShiftNeeded(state, octave, layout = 0) {
   const step = currentStep(state);
   if (!step) return 0;
   const shift = state.baseOctave + step.notes[0].oct - octave;
-  // L ; ' Enter (and P [) already play C–F one octave up
-  return shift === 1 && step.notes.every(n => n.semitone <= 5 && n.oct === step.notes[0].oct) ? 0 : shift;
+  return step.notes.every(n => keyAt(n.semitone, state.baseOctave + n.oct - octave, layout)) ? 0 : shift;
 }
 
 // Wrong presses per step allowed before the answer starts glowing

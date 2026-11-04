@@ -169,11 +169,13 @@ export function parseSwaras(text, raga, sa = 0) {
 // First the keys slide two places (low or high layout, see keymap.js); only if
 // neither fits does Sa move, to the nearest key that fits, white keys first.
 const SA_CHOICES = [0, -1, 2, -3, 4, 5, -5, 1, -2, 3, -4, 6, -6];
-const PLAYABLE = Object.fromEntries(SHIFTS.map(s => [s, playable(s)]));
+// only the song layouts (0, ±2); the ±1 steps are for the player's Shift control
+const SONG_SHIFTS = SHIFTS.filter(s => s % 2 === 0);
+const PLAYABLE = Object.fromEntries(SONG_SHIFTS.map(s => [s, playable(s)]));
 export function fitKeys(swaras, raga) {
   for (const sa of SA_CHOICES) {
     const pitches = parseSwaras(swaras, raga, sa).events.map(e => e.notes[0].oct * 12 + e.notes[0].semitone);
-    const layout = SHIFTS.find(s => pitches.every(p => PLAYABLE[s].has(p)));
+    const layout = SONG_SHIFTS.find(s => pitches.every(p => PLAYABLE[s].has(p)));
     if (layout !== undefined) return { sa, layout };
   }
   return { sa: 0, layout: 0 };

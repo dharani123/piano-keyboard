@@ -19,7 +19,11 @@ const UPPER = [
 ];
 const WHITE_STEPS = [0, 2, 4, 5, 7, 9, 11];
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-export const SHIFTS = [0, 2, -2];
+// 0, ±2 are the song layouts; ±1 are extra steps for the Shift −/+ control (C on A or on D).
+// Songs pick the first layout that fits, so the order matters: keep 0, 2, -2 first.
+export const SHIFTS = [0, 2, -2, 1, -1];
+export const MIN_SHIFT = -2;
+export const MAX_SHIFT = 2;
 
 // Every key of a layout in pitch order; `after` = index of the white key a black one follows
 function buildLayout(shift) {
@@ -47,6 +51,9 @@ const BY_PITCH = Object.fromEntries(SHIFTS.map(s => [s, Object.fromEntries(LAYOU
 export const keyForCode = (code, shift = 0) => BY_CODE[shift][code];
 // The key for a note `rel` octaves from middle C's octave, or undefined
 export const keyAt = (semitone, rel, shift = 0) => BY_PITCH[shift][rel * 12 + semitone];
+// The key code for a note in a layout; if that octave has no key there, the same note an octave away
+export const codeAt = (semitone, rel, shift = 0) =>
+  (keyAt(semitone, rel, shift) ?? keyAt(semitone, 0, shift) ?? keyAt(semitone, 1, shift) ?? keyAt(semitone, -1, shift))?.code;
 // Pitches (semitones from middle C) a layout can play
 export const playable = shift => new Set(LAYOUTS[shift].map(k => k.octaveUp * 12 + k.semitone));
 

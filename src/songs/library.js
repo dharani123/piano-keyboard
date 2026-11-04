@@ -203,6 +203,21 @@ const RAW = [
               F#/0.5 G#/0.5 G#/0.5 F# E/0.5 E F#/0.5 F# F#/0.5 | F# E/0.5 G# E/0.5 E/6 C# F#/1.5 F#/0.5 |
               F# E/0.5 G# E/0.5 E/3 | F#/3 E F#/0.5 G#/1.5`,
   },
+  {
+    id: 'ram-ram',
+    title: 'Ram Ram (piano melody)',
+    level: 'Decoded songs',
+    bpm: 80,
+    decoded: true,
+    hint: "Right-hand melody from your Songscription sheet, in D major: keys E D F Y H J K P ; ' (C♯ D E F♯ G A B, high C♯ D E). It walks down step by step from high D, so let your hand drift left bar by bar. The 16th-note pairs at the end of bars 1–3 are quick, so start with Listen & play at 75%.",
+    // Right hand only, from the user's Songscription sheet of "Ram Ram", D major, 4/4, q = 80.
+    // Chords: D Dmaj7 Bm7 | D/A G | D/F# Em7 | A/E D/A | D. Tied D4 in bar 4 joined.
+    pattern: `D+/1.5 E+/0.5 C#+/1.5 E+/0.25 C#+/0.25 |
+              B/1.5 C#+/0.5 A/1.5 B/0.25 A/0.25 |
+              G/1.5 A/0.5 F#/1.5 G/0.25 F#/0.25 |
+              E/0.75 D/0.75 C#/0.5 E/0.75 F#/0.75 A/0.5 |
+              D+/1 r/3`,
+  },
 ];
 
 const CHORD_NAMES = { '0,4,7': 'C', '5,9,0': 'F', '9,0,4': 'Am', '4,7,11': 'Em', '7,11,2': 'G' };

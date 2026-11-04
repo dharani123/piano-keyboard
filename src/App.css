@@ -442,7 +442,7 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
    is wide enough; otherwise it squeezes in as a third column */
 .raga-nav { width: 190px; box-sizing: border-box; }
 @media (min-width: 1420px) {
-  .songs.with-ragas { position: relative; }
+  .songs.with-ragas, .lessons.with-units { position: relative; }
   .raga-nav {
     position: absolute; top: 0; right: calc(100% + var(--raga-nav-gap, 24px)); width: 210px;
     background: var(--panel); border: 1px solid #2a2c33; border-radius: 10px; padding: 12px 10px;
@@ -451,6 +451,7 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 }
 @media (max-width: 1419px) {
   .songs.with-ragas { grid-template-columns: 190px 250px 1fr; }
+  .lessons.with-units { grid-template-columns: 190px 250px 1fr; }
   .raga-nav { border-right: 1px solid #2a2c33; padding-right: 12px; }
 }
 .raga-nav .unit-title { margin-top: 10px; }
@@ -464,6 +465,9 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .raga-link { padding-left: 14px; gap: 4px; }
 .raga-link .lesson-link-num { width: 20px; }
 .raga-link .lesson-link-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unit-nav .unit-link { align-items: flex-start; gap: 6px; }
+.unit-nav .unit-link .lesson-link-num { width: 18px; }
+.unit-nav .unit-link .lesson-link-stars { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .raga-basic { margin-left: auto; font-size: 9px; color: var(--muted); }
 .unit-title.sub { color: var(--muted); font-weight: 600; }
 .swara-map { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
@@ -582,6 +586,10 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .staff-figure { margin: 6px 0 14px; }
 .staff-figure figcaption { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .staff { display: block; max-width: 100%; height: auto; }
+.rhythm-speed { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; font-size: 12px; color: var(--muted); }
+.rhythm-speed button { padding: 3px 8px; font-size: 12px; }
+.rhythm-speed button.active { border-color: var(--accent); color: var(--accent); }
+.st-playhead { fill: var(--accent); opacity: .75; pointer-events: none; }
 .st-line { stroke: var(--muted); stroke-width: 1; }
 .st-ledger { stroke: var(--text); stroke-width: 1.2; }
 .st-glyph { fill: var(--text); }

@@ -2,7 +2,7 @@ import { parseNotes } from '../data/songs.js';
 
 // The course, in the order a piano teacher would take a beginner through it:
 // orientation → rhythm → intervals & hand position → ear (name that note) → scales → chords →
-// scales in depth → chords in depth. Songs live in the Western Music tab (Easy / Medium / Hard).
+// scales in depth → chords in depth → major & minor and dim/aug/sus on every note → feel-good major and minor chords. Songs live in the Western Music tab (Easy / Medium / Hard).
 //
 // Theory blocks: a string is a paragraph; { list }, { tip }, and
 // { keys: { mark: [...notes], labels: { note: text } }, caption } draws a
@@ -13,8 +13,10 @@ import { parseNotes } from '../data/songs.js';
 //      step = { notes, label, reveal?, prompt?, play?, listen?, phrase? }
 //      play   – notes the app plays when the step starts (ear training)
 //      listen – notes behind a "Hear it" button (chord demos)
+//      exercise.demo – list of chords behind a "Hear the whole loop" button
 //   { type: 'rhythm', bpm, pattern }  – timed play-along, see rhythm.js
 //   { type: 'ear', pool, count, reference, ... } – name the note you hear, see ear/rounds.js
+//   { type: 'playlist', breakSeconds, lessons } – step lessons in a row, with a break between
 
 const notes = text => parseNotes(text);
 const note = text => parseNotes(text)[0];
@@ -50,6 +52,376 @@ const chordStep = (text, label, extra = {}) => {
   const ns = notes(text);
   return { notes: ns, label, listen: ns, chord: true, ...extra };
 };
+
+// ---- Unit 10: major & minor chord on every note, C to B ----
+// Names are spelled the friendly way (E♭ not D♯ for minor 3rds, F for C♯'s E♯).
+// B is played as F♯ B D♯ (2nd inversion) so it stays inside C4–high F.
+const HIGH_KEY_OF = { C: 'L', 'C#': 'P', D: ';', 'D#': '[', E: "'", F: 'Enter' };
+const keysFor = text => text.split(' ').map(t => (t.endsWith('+') ? HIGH_KEY_OF[t.slice(0, -1)] : KEY_OF[t])).join(' ');
+const ROOT_CHORDS = [
+  { id: 'c',  name: 'C',       major: 'C E G',     minor: 'C D# G',     majNames: 'C E G',    minNames: 'C E♭ G' },
+  { id: 'cs', name: 'C♯ / D♭', major: 'C# F G#',   minor: 'C# E G#',    majNames: 'C♯ F G♯',  minNames: 'C♯ E G♯', note: 'The middle note of C♯ major is written E♯ in sheet music, but it is the same key as F.' },
+  { id: 'd',  name: 'D',       major: 'D F# A',    minor: 'D F A',      majNames: 'D F♯ A',   minNames: 'D F A' },
+  { id: 'eb', name: 'E♭ / D♯', major: 'D# G A#',   minor: 'D# F# A#',   majNames: 'E♭ G B♭',  minNames: 'E♭ G♭ B♭' },
+  { id: 'e',  name: 'E',       major: 'E G# B',    minor: 'E G B',      majNames: 'E G♯ B',   minNames: 'E G B' },
+  { id: 'f',  name: 'F',       major: 'F A C+',    minor: 'F G# C+',    majNames: 'F A C',    minNames: 'F A♭ C' },
+  { id: 'fs', name: 'F♯ / G♭', major: 'F# A# C#+', minor: 'F# A C#+',   majNames: 'F♯ A♯ C♯', minNames: 'F♯ A C♯' },
+  { id: 'g',  name: 'G',       major: 'G B D+',    minor: 'G A# D+',    majNames: 'G B D',    minNames: 'G B♭ D' },
+  { id: 'ab', name: 'A♭ / G♯', major: 'G# C+ D#+', minor: 'G# B D#+',   majNames: 'A♭ C E♭',  minNames: 'A♭ C♭ E♭ (C♭ = the B key)' },
+  { id: 'a',  name: 'A',       major: 'A C#+ E+',  minor: 'A C+ E+',    majNames: 'A C♯ E',   minNames: 'A C E' },
+  { id: 'bb', name: 'B♭ / A♯', major: 'A# D+ F+',  minor: 'A# C#+ F+',  majNames: 'B♭ D F',   minNames: 'B♭ D♭ F' },
+  { id: 'b',  name: 'B',       major: 'F# B D#+',  minor: 'F# B D+',    majNames: 'B D♯ F♯',  minNames: 'B D F♯', note: 'B is played with F♯ at the bottom (an inversion) so it fits on your keys. Same three notes, same chord.' },
+];
+const plain = text => text.split(' ').map(t => t.replace('+', ''));
+
+function rootChordLesson(r, i) {
+  const short = r.name.split(' ')[0];
+  return {
+    id: `chords-of-${r.id}`,
+    title: `${r.name}: major & minor`,
+    theory: [
+      ...(i === 0 ? [
+        'Every note on the piano has its own **major** and **minor** chord, and they are built with the same recipe from any starting key:',
+        { list: [
+          '**Major** = root, up **4** half steps, up **3** more (happy, bright)',
+          '**Minor** = root, up **3** half steps, up **4** more (sad, soft)',
+        ] },
+        'The only difference is the **middle note**: in minor it moves down by one key. This unit walks the recipe up the keyboard one note at a time, from C to B.',
+      ] : []),
+      { list: [
+        `**${short} major** = ${r.majNames} → **${keysFor(r.major)}**`,
+        `**${short} minor** = ${r.minNames} → **${keysFor(r.minor)}**`,
+      ] },
+      { keys: { mark: plain(r.major), labels: Object.fromEntries(r.major.split(' ').map(t => [t.replace('+', ''), keysFor(t)])) }, caption: `${short} major: ${keysFor(r.major)}` },
+      { keys: { mark: plain(r.minor), labels: Object.fromEntries(r.minor.split(' ').map(t => [t.replace('+', ''), keysFor(t)])) }, caption: `${short} minor: ${keysFor(r.minor)}` },
+      ...(r.note ? [{ tip: r.note }] : [{ tip: 'Switch back and forth slowly and listen to the mood flip from happy to sad, with just one finger moving.' }]),
+    ],
+    exercise: {
+      type: 'steps',
+      hint: 'glow',
+      make: () => [0, 1].flatMap(round => [
+        chordStep(r.major, short, { prompt: `**${short} major**: ${r.majNames}`, phrase: round }),
+        chordStep(r.minor, `${short}m`, { prompt: `**${short} minor**: ${r.minNames} (middle note down one key)`, phrase: round }),
+      ]).concat([
+        chordStep(r.major, short, { prompt: `Bright again: **${short} major**`, phrase: 2 }),
+        chordStep(r.minor, `${short}m`, { prompt: `End soft: **${short} minor**`, phrase: 2 }),
+      ]),
+    },
+  };
+}
+
+// ---- More chord types on every note, C to B (added 2026-11-03) ----
+// Chords are built from half-step recipes and voiced inside C4–high F: if the top
+// note is too high it moves down an octave to the bottom (an inversion).
+const FRIENDLY = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+// deg = letter steps above the root for each note (3rd = 2, 5th = 4, 2nd = 1, 4th = 3)
+const TRIAD = [0, 2, 4];
+const CHORD_TYPES = {
+  major: { ivs: [0, 4, 7], deg: TRIAD, sym: '', name: 'major' },
+  minor: { ivs: [0, 3, 7], deg: TRIAD, sym: 'm', name: 'minor' },
+  dim: { ivs: [0, 3, 6], deg: TRIAD, sym: '°', name: 'diminished' },
+  aug: { ivs: [0, 4, 8], deg: TRIAD, sym: '+', name: 'augmented' },
+  sus2: { ivs: [0, 2, 7], deg: [0, 1, 4], sym: 'sus2', name: 'sus2' },
+  sus4: { ivs: [0, 5, 7], deg: [0, 3, 4], sym: 'sus4', name: 'sus4' },
+};
+// Proper music spelling: each chord note gets the right letter, then a sharp/flat to fit
+const LETTERS = 'CDEFGAB';
+const LETTER_SEMI = [0, 2, 4, 5, 7, 9, 11];
+const ACCIDENTAL = { '-2': '♭♭', '-1': '♭', 0: '', 1: '♯', 2: '♯♯' }; // ♭♭ ♯♯ rather than 𝄫 𝄪, which many fonts lack
+function spell(rootName, semi, steps) {
+  const li = (LETTERS.indexOf(rootName[0]) + steps) % 7;
+  const diff = ((semi - LETTER_SEMI[li]) % 12 + 18) % 12 - 6;
+  return LETTERS[li] + ACCIDENTAL[diff];
+}
+function voiceChord(root, ivs) {
+  const ps = ivs.map(i => root + i);
+  while (Math.max(...ps) > 17) ps[ps.indexOf(Math.max(...ps))] -= 12;
+  return ps.sort((a, b) => a - b);
+}
+function typedChord(root, type, short) {
+  const t = CHORD_TYPES[type];
+  const ps = voiceChord(root, t.ivs);
+  const text = ps.map(p => ALL_TWELVE[p % 12] + (p >= 12 ? '+' : '')).join(' ');
+  const inOrder = t.ivs.map((iv, n) => spell(FRIENDLY[root], (root + iv) % 12, t.deg[n])).join(' ');
+  return { text, label: short + t.sym, name: `${short}${t.sym}`, notes: inOrder, keys: keysFor(text), title: t.name };
+}
+const chordLine = c => `**${c.name}** (${c.title}) = ${c.notes} → **${c.keys}**`;
+
+function moreChordsLesson(r, i) {
+  const short = r.name.split(' ')[0];
+  const c = Object.fromEntries(['major', 'minor', 'dim', 'aug', 'sus2', 'sus4'].map(t => [t, typedChord(ROOT_CHORDS.indexOf(r), t, short)]));
+  const step = (k, prompt, phrase) => chordStep(c[k].text, c[k].label, { prompt, phrase });
+  return {
+    id: `more-chords-of-${r.id}`,
+    title: `${r.name}: dim, aug & sus`,
+    theory: [
+      ...(i === 0 ? [
+        'Major and minor are two ways of stacking notes. Four more recipes give you the rest of the basic chord colours:',
+        { list: [
+          '**Diminished (°)** = root + **3** + **3** half steps. Tense, spooky, wants to move.',
+          '**Augmented (+)** = root + **4** + **4** half steps. Dreamy, floating, unresolved.',
+          '**sus2** = root + **2** + **5**. The middle note drops to its neighbour: open and airy.',
+          '**sus4** = root + **5** + **2**. The middle note rises to its neighbour: tension that wants to fall back to major.',
+        ] },
+        'Each lesson compares them with that note\'s major and minor chord, so you hear exactly what changes.',
+      ] : []),
+      { list: ['major', 'minor', 'dim', 'aug', 'sus2', 'sus4'].map(k => chordLine(c[k])) },
+      { tip: i === 0
+        ? 'Some notes get unusual names, like E♯ (the F key) or B♭♭ (double flat, the A key). Each chord note keeps its own letter, so the name changes but you press the same key.'
+        : 'Hear the pattern: diminished = minor with the top note down one key; augmented = major with the top note up one key.' },
+    ],
+    exercise: {
+      type: 'steps',
+      hint: 'glow',
+      make: () => [
+        step('major', `**${short}** major, the reference`, 0),
+        step('sus4', `**${short}sus4**: tension…`, 0),
+        step('major', `…resolves to **${short}**`, 0),
+        step('sus2', `**${short}sus2**: open and airy`, 0),
+        step('major', `back to **${short}**`, 0),
+        step('minor', `**${short}m**: minor`, 1),
+        step('dim', `**${short}°**: minor with the top note down one key`, 1),
+        step('major', `**${short}** major again`, 2),
+        step('aug', `**${short}+**: major with the top note up one key`, 2),
+        step('major', `and home to **${short}**`, 2),
+      ],
+    },
+  };
+}
+
+// ---- Feel-good major and minor chords (added 2026-11-04) ----
+// Calm loops made only of major chords, or only of minor chords. Chords stay in normal order and step up the
+// keyboard, as long as the top note is no higher than high D. A♭, A, B♭, B, Am and Bm
+// would go past that, so their top notes move down an octave (an inversion) until they fit.
+const CALM_CHORDS = {
+  C: { label: 'C', text: 'C E G', names: 'C E G' },
+  D: { label: 'D', text: 'D F# A', names: 'D F♯ A' },
+  Eb: { label: 'E♭', text: 'D# G A#', names: 'E♭ G B♭' },
+  E: { label: 'E', text: 'E G# B', names: 'E G♯ B' },
+  F: { label: 'F', text: 'F A C+', names: 'F A C' },
+  G: { label: 'G', text: 'G B D+', names: 'G B D' },
+  Ab: { label: 'A♭', text: 'D# G# C+', names: 'E♭ A♭ C' },
+  A: { label: 'A', text: 'E A C#+', names: 'E A C♯' },
+  Bb: { label: 'B♭', text: 'F A# D+', names: 'F B♭ D' },
+  B: { label: 'B', text: 'D# F# B', names: 'D♯ F♯ B' },
+  Cm: { label: 'Cm', text: 'C D# G', names: 'C E♭ G' },
+  Csm: { label: 'C♯m', text: 'C# E G#', names: 'C♯ E G♯' },
+  Dm: { label: 'Dm', text: 'D F A', names: 'D F A' },
+  Em: { label: 'Em', text: 'E G B', names: 'E G B' },
+  Fm: { label: 'Fm', text: 'F G# C+', names: 'F A♭ C' },
+  Gm: { label: 'Gm', text: 'G A# D+', names: 'G B♭ D' },
+  Am: { label: 'Am', text: 'E A C+', names: 'E A C' },
+  Bm: { label: 'Bm', text: 'F# B D+', names: 'F♯ B D' },
+};
+const calmLine = k => {
+  const c = CALM_CHORDS[k];
+  return `**${c.label}** = ${c.names} → keys **${keysFor(c.text)}**`;
+};
+function calmPrompt(k, prev, last) {
+  const { label, text } = CALM_CHORDS[k];
+  if (!prev) return `Start on **${label}**, and take your time`;
+  if (last) return `Home to **${label}**. Let it ring, then breathe out`;
+  const before = CALM_CHORDS[prev].text.split(' ');
+  const moved = text.split(' ').filter(t => !before.includes(t)).length;
+  if (moved < 3) return `**${label}**: ${moved} finger${moved > 1 ? 's' : ''} move${moved > 1 ? '' : 's'}`;
+  const height = t => notes(t).reduce((sum, n) => sum + n.oct * 12 + n.semitone, 0);
+  return `**${label}**: your hand steps ${height(text) > height(CALM_CHORDS[prev].text) ? 'up' : 'down'}`;
+}
+const calmSteps = order => order.map(({ k, round }, i) => chordStep(CALM_CHORDS[k].text, CALM_CHORDS[k].label, {
+  prompt: calmPrompt(k, order[i - 1]?.k, i === order.length - 1),
+  phrase: round,
+}));
+function calmLesson({ id, title, loop, rounds, end = loop[0], theory, tip }) {
+  // a loop that starts and ends on the same chord plays it once at the seam, not twice
+  const body = loop.at(-1) === loop[0] ? loop.slice(0, -1) : loop;
+  const onePass = [...body, end];
+  return {
+    id: `calm-${id}`,
+    title,
+    theory: [
+      `**${onePass.map(k => CALM_CHORDS[k].label).join(' – ')}**`,
+      theory,
+      { list: [...new Set(onePass)].map(calmLine) },
+      { tip },
+    ],
+    exercise: {
+      type: 'steps',
+      hint: 'glow',
+      demo: onePass.map(k => notes(CALM_CHORDS[k].text)),
+      make: () => {
+        const order = Array.from({ length: rounds }, (_, round) => body.map(k => ({ k, round }))).flat();
+        order.push({ k: end, round: rounds - 1 });
+        return calmSteps(order);
+      },
+    },
+  };
+}
+
+// Each round plays all the chords once in a fresh random order. No chord comes twice in a
+// row, and the last round doesn't end on home, so the final home chord is a real move.
+function shuffledRounds(chords, rounds, home) {
+  const out = [];
+  for (let round = 0; round < rounds; round++) {
+    let order;
+    do {
+      order = [...chords];
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+    } while (order[0] === out.at(-1)?.k || (round === rounds - 1 && order.at(-1) === home));
+    out.push(...order.map(k => ({ k, round })));
+  }
+  return out;
+}
+
+function surpriseLesson({ id, title, chords, home, theory, tip }) {
+  return {
+    id,
+    title,
+    theory: [theory, { list: chords.map(calmLine) }, { tip }],
+    exercise: {
+      type: 'steps',
+      hint: 'glow',
+      make: () => calmSteps([...shuffledRounds(chords, 3, home), { k: home, round: 2 }]),
+    },
+  };
+}
+
+const surpriseChordsLesson = surpriseLesson({
+  id: 'calm-surprise-chords',
+  title: 'Surprise chords',
+  chords: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+  home: 'C',
+  theory: 'All seven white-key major chords in a random order, so your hands learn each shape on its own instead of remembering a sequence. Every chord comes up three times, and the order changes each time you play.',
+  tip: 'Glance at the next chord name, find the shape, then press. Speed will come by itself. For D, any two of its keys are enough.',
+});
+
+const CALM_LESSONS = [
+  {
+    id: 'sway', title: 'Gentle sway', loop: ['C', 'F'], rounds: 4,
+    theory: 'Two chords, rocking slowly like breathing in and out. C is home and F is a soft step away. Your hand steps up the keyboard, then back down.',
+    tip: 'There is no timer here. Hold each chord until it has nearly faded, then move.',
+  },
+  {
+    id: 'home-and-back', title: 'Home and back', loop: ['C', 'G', 'F', 'C'], rounds: 3,
+    theory: 'You leave home, reach a little, and settle back. Ending F → C is the warm "amen" sound, which is why it feels so restful.',
+    tip: 'Turn on the Sustain pedal (Space) and the chords will melt into each other.',
+  },
+  {
+    id: 'sunny-walk', title: 'Sunny walk', loop: ['C', 'F', 'G', 'F'], rounds: 3,
+    theory: 'An easy stroll up and back down. The chords climb from C to G, then step back through F, so nothing feels rushed.',
+    tip: 'Try playing the bottom note first, then the other two, for a soft rolling sound.',
+  },
+  {
+    id: 'floating', title: 'Floating', loop: ['C', 'D', 'F', 'C'], rounds: 3,
+    theory: 'The D major chord brings in F♯, a note from outside C major. That one bright note makes the music lift off the ground for a moment before F brings it gently back down.',
+    tip: 'Dream Keys or Chorus Pad suit this one nicely. Pick them in the Voice panel.',
+  },
+  {
+    id: 'open-road', title: 'Open road', loop: ['C', 'Bb', 'F', 'C'], rounds: 3,
+    theory: 'B♭ is also from outside C major, and it has a relaxed, windows-down feeling. Lots of easy-going rock songs lean on this move.',
+    tip: 'B♭ is played with F at the bottom so it fits your keys. That F stays held on the way to the F chord.',
+  },
+  {
+    id: 'golden-hour', title: 'Golden hour', loop: ['C', 'Eb', 'F', 'C'], rounds: 3,
+    theory: 'E♭ sounds warm and a little nostalgic, like late evening light. F then opens things up again before you come home.',
+    tip: 'Linger on the E♭ chord. It is the heart of this one.',
+  },
+  {
+    id: 'soft-sunrise', title: 'Soft sunrise', loop: ['C', 'Ab', 'Bb', 'C'], rounds: 3,
+    theory: 'A♭ dims the light for a moment, B♭ starts to climb, and C arrives like the sun coming up. This rise is a favourite ending in film music.',
+    tip: 'The last step, B♭ → C, is the sunrise. Play it a touch slower than the others.',
+  },
+  {
+    id: 'wistful-smile', title: 'Wistful smile', loop: ['C', 'E', 'F', 'C'], rounds: 3,
+    theory: 'E major sounds bittersweet here, as if it wants to be sad but smiles instead. F lifts it, and C lets it all go.',
+    tip: 'From E to F, all three fingers slide up by just one key.',
+  },
+  {
+    id: 'long-drift', title: 'Long drift', loop: ['C', 'F', 'C', 'Bb', 'F', 'C', 'Ab', 'Bb', 'C', 'D', 'F', 'C'], rounds: 2,
+    theory: 'A wind-down through the favourites: the sway, the open road, the sunrise and the float, one after another. Nothing to get right, just let it drift.',
+    tip: 'Play this one as slowly as you like, ideally with Sustain on.',
+  },
+  {
+    id: 'up-and-back', title: 'Up the white keys and back', loop: ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'A', 'G', 'F', 'E', 'D', 'C'], rounds: 1,
+    theory: 'One long walk: the major chord on every white key, from C up to B, then all the way back down to C.',
+    tip: 'A and B are played with their top notes moved down so they fit your keys, so your hand drops back there even though the chords keep climbing. For the D chord, any two of its keys are enough: the app plays the third.',
+  },
+];
+
+const FEEL_GOOD_MAJOR = [...CALM_LESSONS.map(calmLesson), surpriseChordsLesson];
+
+// A lesson that runs through other lessons in order, with a break between each
+const playlistLesson = (id, title, theory, lessons) => ({
+  id,
+  title,
+  theory,
+  exercise: { type: 'playlist', breakSeconds: 10, lessons: lessons.map(({ title, exercise }) => ({ title, exercise })) },
+});
+
+// Same idea in minor: most loops rest on Am, and every chord in them is minor.
+const CALM_MINOR_LESSONS = [
+  {
+    id: 'minor-slow-breath', title: 'Slow breath', loop: ['Am', 'Dm'], rounds: 4,
+    theory: 'Two soft chords, rocking slowly in and out. Minor chords sound quieter and more thoughtful than major ones, a good match for winding down.',
+    tip: 'Am is played with E at the bottom so it fits your keys. Same notes, same chord.',
+  },
+  {
+    id: 'minor-evening-rain', title: 'Evening rain', loop: ['Am', 'Em', 'Dm', 'Am'], rounds: 3,
+    theory: 'Gentle and a little grey, like watching rain from indoors. The loop drifts away from Am, then Dm leads it softly home.',
+    tip: 'The E key stays held from Am to Em. Turn on Sustain (Space) and let the chords blur together.',
+  },
+  {
+    id: 'minor-quiet-walk', title: 'Quiet walk', loop: ['Am', 'Dm', 'Em', 'Dm'], rounds: 3,
+    theory: 'An unhurried walk, up a little and back again. Nothing resolves too firmly, so it can keep going for as long as you like.',
+    tip: 'From Dm to Em your hand steps up two keys. Keep the shape and just slide.',
+  },
+  {
+    id: 'minor-moonlight', title: 'Moonlight', loop: ['Am', 'Bm', 'Dm', 'Am'], rounds: 3,
+    theory: 'Bm brings in F♯, a note from outside the A minor scale, and the music seems to catch a little light before settling.',
+    tip: 'From Am to Bm, all three fingers step up two keys together.',
+  },
+  {
+    id: 'minor-night-road', title: 'Night road', loop: ['Am', 'Gm', 'Dm', 'Am'], rounds: 3,
+    theory: 'Gm feels like a turn onto an empty road: B♭ darkens the sound without making it tense.',
+    tip: 'Strings or Haze Synth suit this one nicely. Pick them in the Voice panel.',
+  },
+  {
+    id: 'minor-old-photograph', title: 'Old photograph', loop: ['Am', 'Cm', 'Dm', 'Am'], rounds: 3,
+    theory: 'Cm is the surprise here. It sounds far away and nostalgic, then Dm gently brings you back.',
+    tip: 'From Cm to Dm, all three fingers step up two keys together.',
+  },
+  {
+    id: 'minor-before-dawn', title: 'Before dawn', loop: ['Am', 'Fm', 'Gm', 'Am'], rounds: 3,
+    theory: 'Fm is the darkest moment, Gm starts to rise, and Am arrives like the sky getting lighter.',
+    tip: 'From Fm to Gm, all three fingers step up two keys together.',
+  },
+  {
+    id: 'minor-far-away', title: 'Far away', loop: ['Am', 'Csm', 'Dm', 'Am'], rounds: 3,
+    theory: 'C♯m sounds like a distant memory, then slips up one key into Dm. It is the strangest chord in this unit, and one of the prettiest.',
+    tip: 'From C♯m to Dm, all three fingers slide up by just one key.',
+  },
+  {
+    id: 'minor-long-night', title: 'Long night', loop: ['Am', 'Dm', 'Am', 'Gm', 'Dm', 'Am', 'Fm', 'Gm', 'Am', 'Bm', 'Dm', 'Am'], rounds: 2,
+    theory: 'A wind-down through the favourites: the breath, the night road, the dawn and the moonlight, one after another. Nothing to get right, just let it drift.',
+    tip: 'Play this one as slowly as you like, ideally with Sustain on.',
+  },
+  {
+    id: 'minor-up-and-back', title: 'Up the white keys and back', loop: ['Cm', 'Dm', 'Em', 'Fm', 'Gm', 'Am', 'Bm', 'Am', 'Gm', 'Fm', 'Em', 'Dm', 'Cm'], rounds: 1,
+    theory: 'One long walk: the minor chord on every white key, from C up to B, then all the way back down to C.',
+    tip: 'Am and Bm are played with their top notes moved down so they fit your keys, so your hand drops back there even though the chords keep climbing.',
+  },
+];
+
+const minorSurpriseLesson = surpriseLesson({
+  id: 'calm-minor-surprise',
+  title: 'Surprise minor chords',
+  chords: ['Cm', 'Dm', 'Em', 'Fm', 'Gm', 'Am', 'Bm'],
+  home: 'Am',
+  theory: 'All seven white-key minor chords in a random order, so your hands learn each shape on its own. Every chord comes up three times, the order changes each time you play, and you finish on Am.',
+  tip: 'Glance at the next chord name, find the shape, then press. Speed will come by itself.',
+});
 
 const FINGERS = [
   { label: 'L5', name: 'C', text: 'Left hand, finger **5** (pinky)' },
@@ -811,21 +1183,68 @@ export const UNITS = [
         id: 'pop-progression',
         title: 'The pop progression: I – V – vi – IV',
         theory: [
-          '**C – G – Am – F** (I – V – vi – IV) is the most famous chord loop in pop music. It is used in hundreds of hit songs.',
-          'With smart inversions your hand barely moves, because the chords share notes:',
-          { list: ['**C** = C E G', '**G** = D G B (2nd inversion)', '**Am** = C E A (1st inversion)', '**F** = C F A (2nd inversion)'] },
+          '**C – G – Am – F** (I – V – vi – IV) is the most famous chord loop in pop music. Hundreds of hit songs use it, usually one chord per bar, round and round.',
+          '**Where the chords come from.** They are four of the seven "Chords of the scale" you already know. Number the notes of C major 1–7 and build a triad on 1, 5, 6 and 4:',
+          { list: [
+            '**I** = chord on note 1 (C) → **C** major = C E G',
+            '**V** = chord on note 5 (G) → **G** major = G B D',
+            '**vi** = chord on note 6 (A) → **A minor** = A C E (small numeral = minor)',
+            '**IV** = chord on note 4 (F) → **F** major = F A C',
+          ] },
+          '**What each chord does.** The loop is a little story: *home → away → a sad twist → a warm lift → home*.',
+          { list: [
+            '**I (C): home.** Stable and at rest. The song "lives" here.',
+            '**V (G): tension.** The strongest chord pulling back home. Your ear expects C next…',
+            '**vi (Am): the surprise.** …but you get A minor instead. Am shares two notes with C (C and E), so it sounds *like* home, only darker. This moment is why the loop feels emotional.',
+            '**IV (F): the lift.** Bright and open, like taking a breath. F → C is the soft "amen" ending, so it leads you naturally back to the start.',
+          ] },
+          'Three major chords and one minor chord give the mix of happy and sad that pop songs love: **bittersweet**.',
+          '**Moving your hand.** Use these shapes (inversions) so the chords share notes and your fingers move as little as possible:',
+          { list: [
+            '**C** = C E G → keys **S F H**',
+            '**G** = D G B (2nd inversion) → keys **D H K**. The biggest move: the whole hand shifts up.',
+            '**Am** = C E A (1st inversion) → keys **S F J**. Every finger slides back down: D→C, G→E, B→A.',
+            '**F** = C F A (2nd inversion) → keys **S G J**. Only the middle finger moves, E→F (one step).',
+            'back to **C** = C E G → keys **S F H**. The bottom C stays; F→E and A→G each step down.',
+          ] },
           { keys: { mark: ['D', 'G', 'B'], labels: keyLabels(['D', 'G', 'B']) }, caption: 'G as D G B: D + H + K' },
-          { tip: 'Loop it and hum any melody on top. You will recognise songs!' },
+          { keys: { mark: ['C', 'E', 'A'], labels: keyLabels(['C', 'E', 'A']) }, caption: 'Am as C E A: S + F + J (two notes shared with C)' },
+          { keys: { mark: ['C', 'F', 'A'], labels: keyLabels(['C', 'F', 'A']) }, caption: 'F as C F A: S + G + J (only E→F changed)' },
+          '**The same loop in any key.** The Roman numerals are a recipe, not fixed notes. Count 1, 5, 6, 4 in any major scale:',
+          { list: [
+            '**C major:** C – G – Am – F (Let It Be, No Woman No Cry)',
+            '**G major:** G – D – Em – C',
+            '**D major:** D – A – Bm – G (With or Without You). Ram Ram, your decoded song, is in D and uses D, Bm and G from this family.',
+            '**A major:** A – E – F♯m – D (Someone Like You)',
+          ] },
+          '**Same chords, different start.** Start the loop on another chord and the mood changes:',
+          { list: [
+            '**vi – IV – I – V** (Am – F – C – G): starts sad, then gets hopeful. Very common in modern pop.',
+            '**I – vi – IV – V** (C – Am – F – G): the 1950s doo-wop loop. Same chords in a new order.',
+            '**IV – I – V – vi** (F – C – G – Am): floats, never quite settles.',
+          ] },
+          { tip: 'Loop it slowly, 4 beats per chord, and hum any melody on top. You will start recognising songs everywhere. Watch the bottom note: C – D – C – C.' },
         ],
         exercise: {
           type: 'steps',
           hint: 'glow',
-          make: () => [0, 1, 2].flatMap(round => [
-            chordStep('C E G', 'C', { prompt: '**I**: C', phrase: round }),
-            chordStep('D G B', 'G', { prompt: '**V**: G', phrase: round }),
-            chordStep('C E A', 'Am', { prompt: '**vi**: Am', phrase: round }),
-            chordStep('C F A', 'F', { prompt: '**IV**: F', phrase: round }),
-          ]),
+          make: () => [
+            ...[0, 1].flatMap(round => [
+              chordStep('C E G', 'C', { prompt: round ? '**I**: C (home)' : '**I**: C. Home, at rest', phrase: round }),
+              chordStep('D G B', 'G', { prompt: round ? '**V**: G (tension)' : '**V**: G. Whole hand up: tension, wants to go home…', phrase: round }),
+              chordStep('C E A', 'Am', { prompt: round ? '**vi**: Am (the twist)' : '**vi**: Am. …but a sad twist instead (C and E stay the same)', phrase: round }),
+              chordStep('C F A', 'F', { prompt: round ? '**IV**: F (the lift)' : '**IV**: F. Only E→F moves: the lift', phrase: round }),
+            ]),
+            chordStep('C E A', 'Am', { prompt: 'Start on the twist: **vi**: Am', phrase: 2 }),
+            chordStep('C F A', 'F', { prompt: '**IV**: F', phrase: 2 }),
+            chordStep('C E G', 'C', { prompt: '**I**: C', phrase: 2 }),
+            chordStep('D G B', 'G', { prompt: '**V**: G (vi – IV – I – V: sad → hopeful)', phrase: 2 }),
+            chordStep('G B D+', 'G', { prompt: 'Same loop in **G major**: **I** = G', phrase: 3 }),
+            chordStep('D F# A', 'D', { prompt: '**V** = D (F♯ is the black key Y)', phrase: 3 }),
+            chordStep('E G B', 'Em', { prompt: '**vi** = Em', phrase: 3 }),
+            chordStep('C E G', 'C', { prompt: '**IV** = C', phrase: 3 }),
+            chordStep('G B D+', 'G', { prompt: 'Home: **I** = G', phrase: 3 }),
+          ],
         },
       },
       {
@@ -890,6 +1309,36 @@ export const UNITS = [
         },
       },
     ],
+  },
+  {
+    title: 'Major & minor chords of all scales',
+    // Added 2026-11-03 at the user's request: one lesson per note, C up to B, each with
+    // the major and minor triad on that note. Open from the start so it can be played now.
+    openStart: true,
+    lessons: ROOT_CHORDS.map(rootChordLesson),
+  },
+  {
+    title: 'Diminished, augmented & sus on every note',
+    openStart: true,
+    lessons: ROOT_CHORDS.map(moreChordsLesson),
+  },
+  {
+    title: 'Feel-good major chords',
+    // Added 2026-11-04: relaxing progressions, major chords only. Open from the start, and
+    // every lesson stays open (allOpen) so you can pick whichever suits your mood.
+    openStart: true,
+    allOpen: true,
+    lessons: [...FEEL_GOOD_MAJOR, playlistLesson('calm-relax', 'Relax', [
+      'Sit back and play the whole unit, one lesson after another, from Gentle sway to Surprise chords.',
+      'Each lesson plays as usual, with no timer. After each one you get a 10-second break, then the next starts by itself.',
+      { tip: 'It takes a while, so pick a time when you can let it flow. Your stars here are the average across all the lessons.' },
+    ], FEEL_GOOD_MAJOR)],
+  },
+  {
+    title: 'Feel-good minor chords',
+    openStart: true,
+    allOpen: true,
+    lessons: [...CALM_MINOR_LESSONS.map(calmLesson), minorSurpriseLesson],
   },
 ];
 

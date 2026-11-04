@@ -5,6 +5,7 @@ import StepExercise from './StepExercise.jsx';
 import RhythmExercise from './RhythmExercise.jsx';
 import EarExercise from './EarExercise.jsx';
 import ChoiceExercise from './ChoiceExercise.jsx';
+import PlaylistExercise from './PlaylistExercise.jsx';
 import { PASS_STARS } from '../../lessons/progress.js';
 
 const MESSAGES = [
@@ -41,7 +42,7 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
     setPhase('exercise');
   }
 
-  const Exercise = { rhythm: RhythmExercise, ear: EarExercise, choice: ChoiceExercise }[lesson.exercise.type] ?? StepExercise;
+  const Exercise = { rhythm: RhythmExercise, ear: EarExercise, choice: ChoiceExercise, playlist: PlaylistExercise }[lesson.exercise.type] ?? StepExercise;
   const backToNotes = () => show('theory', pageRef.current);
 
   const active = phase !== 'theory' && piano.slot && createPortal(

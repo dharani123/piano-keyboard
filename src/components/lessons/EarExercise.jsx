@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { engine } from '../../audio/engine.js';
 import { frequency } from '../../audio/pitch.js';
-import { bySemitone, SEMITONES } from '../../data/keymap.js';
+import { bySemitone, SEMITONES, codeAt } from '../../data/keymap.js';
 import { starsForMistakes } from '../../lessons/stepTrainer.js';
 import { makeRounds } from '../../ear/rounds.js';
 import { startSession, earReducer, RIGHT_DELAY } from '../../ear/session.js';
@@ -113,8 +113,8 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
 
   useEffect(() => {
     const glow = !introDone
-      ? exercise.intro.map(n => bySemitone[SEMITONES[n]].code)
-      : state.phase === 'fix' ? [bySemitone[round.target].code] : [];
+      ? exercise.intro.map(n => codeAt(SEMITONES[n], 0, piano.layout))
+      : state.phase === 'fix' ? [codeAt(round.target, 0, piano.layout)] : [];
     const wrong = state.last && !state.last.correct && state.last.answered !== null ? lastPress.current?.code : null;
     piano.setHighlight({ targets: glow, wrong });
   }, [introDone, state.phase, state.last]);

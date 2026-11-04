@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { parsePitch, keySigSpots } from '../../sheet/notation.js';
+import { parsePitch, keySigSpots, beatsOf } from '../../sheet/notation.js';
 
 // Draws real staff notation as SVG.
 //
@@ -218,7 +218,29 @@ function Voice({ placed, clef, top, ink, hairpins = [] }) {
 }
 
 // scale: screen pixels per staff unit (1.45 in lesson notes, bigger in exercises)
-export default function Staff({ clef = 'treble', keySig = 0, time = null, items = [], lower = null, hairpins, caption, scale = 1.45 }) {
+// The x position of a moment in the music (in beats from the start), sliding evenly
+// from one note or rest to the next; used for the playhead line in timed exercises
+function beatToX(placed, beat, end) {
+  const anchors = [];
+  let b = 0;
+  for (const p of placed) {
+    const it = p.item;
+    if (it.bar || it.gap || it.hairpin || !(it.d || it.r)) continue;
+    anchors.push([b, p.x - 8]);
+    b += beatsOf(it);
+  }
+  anchors.push([b, end]);
+  if (beat <= 0) return anchors[0][1];
+  for (let i = 1; i < anchors.length; i++) {
+    const [b1, x1] = anchors[i];
+    const [b0, x0] = anchors[i - 1];
+    if (beat <= b1) return x0 + (x1 - x0) * ((beat - b0) / (b1 - b0 || 1));
+  }
+  return end;
+}
+
+// playhead: beats from the start for a moving line across the staff (null = none)
+export default function Staff({ clef = 'treble', keySig = 0, time = null, items = [], lower = null, hairpins, caption, scale = 1.45, playhead = null }) {
   const svgRef = useRef(null);
   const drawnRef = useRef(null);
   const grand = Boolean(lower);
@@ -276,6 +298,16 @@ export default function Staff({ clef = 'treble', keySig = 0, time = null, items 
         <Voice placed={upper} clef={grand ? 'treble' : clef} top={TOP} ink={ink} hairpins={hairpins} />
         {grand && <Voice placed={lowerPlaced} clef="bass" top={TOP + GRAND_GAP} ink={ink} />}
         </g>
+        {playhead !== null && (
+          <rect
+            className="st-playhead"
+            x={beatToX(upper, playhead, end) - 1.2}
+            y={TOP - 1.5 * S}
+            width={2.4}
+            height={tops.at(-1) - TOP + 7 * S}
+            rx={1.2}
+          />
+        )}
       </svg>
       {caption && <figcaption>{caption}</figcaption>}
     </figure>

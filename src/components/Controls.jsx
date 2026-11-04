@@ -21,7 +21,7 @@ function Stepper({ label, hint, value, display, onStep, disabled = false }) {
   );
 }
 
-export default function Controls({ effects, onEffect, octave, onOctave, transpose, onTranspose, transposeDisabled, pedalLatched, sustainOn, onPedal }) {
+export default function Controls({ effects, onEffect, octave, onOctave, transpose, onTranspose, transposeDisabled, shift, onShift, shiftDisabled, pedalLatched, sustainOn, onPedal }) {
   return (
     <div className="panel controls">
       <div className="panel-title">Effects</div>
@@ -37,6 +37,14 @@ export default function Controls({ effects, onEffect, octave, onOctave, transpos
           display={transpose > 0 ? `+${transpose}` : transpose}
           onStep={onTranspose}
           disabled={transposeDisabled}
+        />
+        {/* slides the notes along the home row: −1 puts C on A, +1 puts C on D */}
+        <Stepper
+          label="Shift"
+          value={shift}
+          display={shift > 0 ? `+${shift}` : shift}
+          onStep={onShift}
+          disabled={shiftDisabled}
         />
       </div>
       <button className={'pedal' + (sustainOn ? ' on' : '')} onClick={onPedal}>

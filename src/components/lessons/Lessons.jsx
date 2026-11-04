@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UNITS, LESSONS } from '../../lessons/curriculum.js';
 import { loadProgress, saveProgress, hasPassed } from '../../lessons/progress.js';
 import Course from './Course.jsx';
@@ -8,10 +8,20 @@ import SongsMode from '../songs/SongsMode.jsx';
 import RelaxMode from '../songs/RelaxMode.jsx';
 
 const CARNATIC_MODE_KEY = 'desk-piano-carnatic-mode';
+const TAB_KEY = 'desk-piano-tab';
+const TABS = ['carnatic', 'lessons', 'gym', 'western', 'decoded', 'sheet'];
 
 export default function Lessons({ piano }) {
   const [progress, setProgress] = useState(loadProgress);
-  const [tab, setTab] = useState('carnatic');
+  const [tab, setTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem(TAB_KEY);
+      return TABS.includes(saved) ? saved : 'carnatic';
+    } catch { return 'carnatic'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(TAB_KEY, tab); } catch { /* storage blocked */ }
+  }, [tab]);
   // The Carnatic tab has two ways in: Relax (no scores) or Practice (stars, locks)
   const [carnaticMode, setCarnaticMode] = useState(() => {
     try { return localStorage.getItem(CARNATIC_MODE_KEY) === 'practice' ? 'practice' : 'relax'; } catch { return 'relax'; }
@@ -59,8 +69,8 @@ export default function Lessons({ piano }) {
       </div>
       {tab === 'carnatic' && carnaticMode === 'relax' ? <RelaxMode piano={piano} modeSwitch={modeSwitch} /> : tab === 'western' || tab === 'decoded' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} modeSwitch={tab === 'carnatic' ? modeSwitch : null} /> : tab === 'gym' && gymOpen ? <EarGym piano={piano} /> : (
       tab === 'sheet'
-        ? <Course key="sheet" title="Sheet reading" units={SHEET_UNITS} lessons={SHEET_LESSONS} progress={progress} update={update} piano={piano} />
-        : <Course key="lessons" units={UNITS} lessons={LESSONS} progress={progress} update={update} piano={piano} />
+        ? <Course key="sheet" storageKey="desk-piano-open-sheet-lesson" title="Sheet reading" units={SHEET_UNITS} lessons={SHEET_LESSONS} progress={progress} update={update} piano={piano} />
+        : <Course key="lessons" storageKey="desk-piano-open-lesson" units={UNITS} lessons={LESSONS} progress={progress} update={update} piano={piano} />
       )}
     </div>
   );

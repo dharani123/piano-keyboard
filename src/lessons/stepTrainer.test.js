@@ -64,3 +64,49 @@ describe('stepTrainer', () => {
     expect(starsForMistakes(5, 10)).toBe(1);
   });
 });
+
+describe('D major chord step (keyboard drops the third key)', () => {
+  const n = (semitone, oct = 0) => ({ semitone, oct });
+  const D = { notes: [n(2), n(6), n(9)], label: 'D' };
+  const E = { notes: [n(4), n(8), n(11)], label: 'E' };
+  const press = (state, semitone, held = []) =>
+    stepReducer(state, { type: 'press', semitone, octave: 4, code: 'x', held: held.map(s => ({ semitone: s, octave: 4 })) });
+
+  it('stays on the chord after one key', () => {
+    expect(press(startSteps([D, E], 4), 2).index).toBe(0);
+  });
+
+  it.each([[2, 9, 6], [2, 6, 9], [6, 9, 2]])('completes on %i + %i and reports %i as the note to fill in', (a, b, missing) => {
+    const s = press(press(startSteps([D, E], 4), a), b, [a]);
+    expect(s.index).toBe(1);
+    expect(s.filled.notes.map(x => x.semitone)).toEqual([missing]);
+  });
+
+  it('does not count the third key as a mistake when the keyboard does catch it', () => {
+    let s = press(press(startSteps([D, E], 4), 2), 6, [2]);
+    s = press(s, 9, [2, 6]);
+    expect(s.mistakes).toBe(0);
+    expect(s.index).toBe(1);
+  });
+
+  it('still counts a truly wrong key, and stops forgiving once the next chord is done', () => {
+    let s = press(press(startSteps([D, E, E], 4), 2), 9, [2]);
+    expect(press(s, 0).mistakes).toBe(1);
+    s = press(press(press(s, 4), 8, [4]), 11, [4, 8]);
+    expect(press(s, 6).mistakes).toBe(1);
+  });
+
+  it('leaves the fill-in to the app when it already played the third note', () => {
+    const first = press(startSteps([D, E], 4), 2);
+    const s = stepReducer(first, { type: 'press', semitone: 9, octave: 4, code: 'x', held: [{ semitone: 2, octave: 4 }], chordFilled: true });
+    expect(s.index).toBe(1);
+    expect(s.filled).toBeFalsy();
+  });
+
+  it('leaves normal chords needing every key', () => {
+    const s = press(press(startSteps([E, E], 4), 4), 8, [4]);
+    expect(s.index).toBe(0);
+    expect(s.filled).toBeFalsy();
+  });
+});
+
