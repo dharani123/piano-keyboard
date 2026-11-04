@@ -49,7 +49,7 @@ export default function Controls({ effects, onEffect, octave, onOctave, transpos
       </div>
       <button className={'pedal' + (sustainOn ? ' on' : '')} onClick={onPedal}>
         Sustain pedal {pedalLatched ? '(locked on)' : ''}
-        <small>hold <kbd>Space</kbd> or click to lock</small>
+        <small>click to lock</small>
       </button>
     </div>
   );
