@@ -10,7 +10,6 @@ import Display from './components/Display.jsx';
 import VoicePanel from './components/VoicePanel.jsx';
 import Controls from './components/Controls.jsx';
 import Lessons from './components/lessons/Lessons.jsx';
-import Camouflage from './components/Camouflage.jsx';
 import { effectiveTranspose } from './ear/transposeLock.js';
 import { COLOUR_MODES, loadColourMode, saveColourMode } from './data/colours.js';
 import { SIZE_MODES, loadSizeMode, saveSizeMode } from './data/pianoSize.js';
@@ -34,6 +33,7 @@ export default function App() {
   const [transposeLocks, setTransposeLocks] = useState(0);
   const transpose = TRANSPOSE_ENABLED ? effectiveTranspose(storedTranspose, transposeLocks) : 0;
   const [effects, setEffects] = useState({ volume: 0.7, reverb: 0.25, chorus: 0 });
+  const [spaceHeld, setSpaceHeld] = useState(false);
   const [pedalLatched, setPedalLatched] = useState(false);
   const [pressed, setPressed] = useState(() => new Set());
   const [lastNote, setLastNote] = useState(null);
@@ -55,7 +55,6 @@ export default function App() {
   const [hideOutlines, setHideOutlines] = useState(() => {
     try { return localStorage.getItem('desk-piano-hide-outlines') === '1'; } catch { return false; }
   });
-  const [camouflage, setCamouflage] = useState(false);
   // synchronous copy (code -> { semitone, octave }), so key + mouse can't double-trigger
   const heldRef = useRef(new Map());
   const listeners = useRef(new Set());
@@ -67,7 +66,7 @@ export default function App() {
     return () => listeners.current.delete(fn);
   }, []);
 
-  const sustainOn = pedalLatched;
+  const sustainOn = spaceHeld || pedalLatched;
 
   useEffect(() => { engine.setSustain(sustainOn); }, [sustainOn]);
   // A key held across a layout change would never get its key-up note
@@ -129,6 +128,7 @@ export default function App() {
     chordFillOn.current = false;
     heldRef.current.clear();
     setPressed(new Set());
+    setSpaceHeld(false);
     engine.allOff();
   }
 
@@ -147,7 +147,7 @@ export default function App() {
     noteDown,
     noteUp,
     releaseAll,
-    camouflage: () => setCamouflage(c => !c),
+    sustain: setSpaceHeld,
     octave: shiftOctave,
     transpose: shiftTranspose,
     voice: setVoiceIndex,
@@ -218,10 +218,6 @@ export default function App() {
             <input type="checkbox" checked={hideOutlines} onChange={e => setHideOutlines(e.target.checked)} />
             Hide outlines
           </label>
-          <label className="piano-option">
-            <input type="checkbox" checked={camouflage} onChange={e => setCamouflage(e.target.checked)} />
-            Camouflage
-          </label>
         </div>
         <div className="fall-slot" ref={setFallSlot} />
         <Piano
@@ -245,8 +241,6 @@ export default function App() {
         &nbsp;·&nbsp; sharps <kbd>E</kbd><kbd>R</kbd> · <kbd>Y</kbd><kbd>U</kbd><kbd>I</kbd> · <kbd>P</kbd><kbd>[</kbd>
         &nbsp;·&nbsp; transpose <kbd>←</kbd><kbd>→</kbd>
       </p>
-
-      {camouflage && <Camouflage shift={layout} pressed={pressed} onClose={() => setCamouflage(false)} />}
     </div>
   );
 }

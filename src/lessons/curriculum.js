@@ -306,7 +306,7 @@ const CALM_LESSONS = [
   {
     id: 'home-and-back', title: 'Home and back', loop: ['C', 'G', 'F', 'C'], rounds: 3,
     theory: 'You leave home, reach a little, and settle back. Ending F → C is the warm "amen" sound, which is why it feels so restful.',
-    tip: 'Turn on the Sustain pedal and the chords will melt into each other.',
+    tip: 'Turn on the Sustain pedal (Space) and the chords will melt into each other.',
   },
   {
     id: 'sunny-walk', title: 'Sunny walk', loop: ['C', 'F', 'G', 'F'], rounds: 3,
@@ -370,7 +370,7 @@ const CALM_MINOR_LESSONS = [
   {
     id: 'minor-evening-rain', title: 'Evening rain', loop: ['Am', 'Em', 'Dm', 'Am'], rounds: 3,
     theory: 'Gentle and a little grey, like watching rain from indoors. The loop drifts away from Am, then Dm leads it softly home.',
-    tip: 'The E key stays held from Am to Em. Turn on Sustain and let the chords blur together.',
+    tip: 'The E key stays held from Am to Em. Turn on Sustain (Space) and let the chords blur together.',
   },
   {
     id: 'minor-quiet-walk', title: 'Quiet walk', loop: ['Am', 'Dm', 'Em', 'Dm'], rounds: 3,
@@ -492,7 +492,7 @@ export const UNITS = [
             list: [
               'Left hand: pinky (5) on `S`, ring (4) on `D`, middle (3) on `F`, index (2) on `G`',
               'Right hand: index (2) on `H`, middle (3) on `J`, ring (4) on `K`, pinky (5) on `L`',
-              'Both thumbs (1) rest on `Space`, ready but not pressing it',
+              'Both thumbs (1) rest on `Space`, which is your sustain pedal',
             ],
           },
           'You will get finger numbers instead of note names. Play each one without looking down. If you miss twice, the key glows.',
@@ -1294,7 +1294,7 @@ export const UNITS = [
           'An **arpeggio** is a chord spread out one note at a time, up and down. Pianists use arpeggios for flowing accompaniments, and they train your hand to *know* each chord shape.',
           'Play each chord as an arpeggio through two octaves of notes: **root, 3rd, 5th, root**, then back down.',
           { list: ['**C**: C E G C', '**Am**: A C E (high)', '**F**: F A C F (high)', '**G7**: G B D F'] },
-          { tip: 'Keep it even, like a music box. Then try the same thing freely with the sustain pedal switched on.' },
+          { tip: 'Keep it even, like a music box. Then try the same thing freely with the sustain pedal (Space) held down.' },
         ],
         exercise: {
           type: 'steps',

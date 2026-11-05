@@ -31,6 +31,7 @@ export function useKeyboard(handlers) {
         down.delete(e.code);
         if (![...down.values()].includes(note)) h.noteUp(note);
       }
+      if (e.code === 'Space') { e.preventDefault(); h.sustain(false); }
     }
     function onBlur() {
       down.clear();
@@ -55,7 +56,7 @@ const noteFor = (code, shift) => (voiceDigit(code, shift) !== null ? null : note
 export function keyAction(code, shift = false) {
   const note = noteFor(code, shift);
   if (note) return h => h.noteDown(note);
-  if (code === 'Space') return h => h.camouflage();
+  if (code === 'Space') return h => h.sustain(true);
   if (code === 'KeyZ') return h => h.octave(-1);
   if (code === 'KeyX') return h => h.octave(1);
   if (code === 'ArrowLeft') return h => h.transpose(-1);

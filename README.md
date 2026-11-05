@@ -16,7 +16,7 @@ Open http://localhost:5173.
 - Home row `S D F G H J K` = C D E F G A B, then `L ; ' Enter` = high C D E F
 - Black keys: `E R` · `Y U I` · `P [`
 - Only letter keys play notes. Exercises that need lower or higher notes (Mel/Mandra Sthayi) slide the layout two keys for that exercise: `A S D` = low G A B, or the row runs D up to high A
-- `Z` / `X` octave down/up · `←` / `→` transpose · `Space` camouflage on/off · sustain = click the pedal button
+- `Z` / `X` octave down/up · `←` / `→` transpose · `Space` sustain
 
 ## What's inside
 
