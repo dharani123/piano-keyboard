@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { keyAction } from './useKeyboard.js';
+import { keyAction, leftShiftTap } from './useKeyboard.js';
 
 function run(code, shift = false) {
   const calls = [];
@@ -33,5 +33,48 @@ describe('keyAction', () => {
 
   it('does nothing on a plain digit', () => {
     expect(run('Digit5')).toEqual([]);
+  });
+});
+
+describe('leftShiftTap', () => {
+  it('fires when left Shift is pressed and released alone', () => {
+    const tap = leftShiftTap();
+    tap.keyDown('ShiftLeft');
+    expect(tap.keyUp('ShiftLeft')).toBe(true);
+  });
+
+  it('does not fire for Shift+1, so voice picking still works', () => {
+    const tap = leftShiftTap();
+    tap.keyDown('ShiftLeft');
+    tap.keyDown('Digit1');
+    tap.keyUp('Digit1');
+    expect(tap.keyUp('ShiftLeft')).toBe(false);
+  });
+
+  it('does not fire for right Shift', () => {
+    const tap = leftShiftTap();
+    tap.keyDown('ShiftRight');
+    expect(tap.keyUp('ShiftRight')).toBe(false);
+  });
+
+  it('does not fire when left Shift joins Ctrl, Alt or Meta', () => {
+    const tap = leftShiftTap();
+    tap.keyDown('ShiftLeft', true);
+    expect(tap.keyUp('ShiftLeft')).toBe(false);
+  });
+
+  it('does not re-arm on key repeat after another key cancelled the tap', () => {
+    const tap = leftShiftTap();
+    tap.keyDown('ShiftLeft');
+    tap.keyDown('Digit1');
+    tap.keyDown('ShiftLeft', false, true);
+    expect(tap.keyUp('ShiftLeft')).toBe(false);
+  });
+
+  it('forgets a press when the window loses focus', () => {
+    const tap = leftShiftTap();
+    tap.keyDown('ShiftLeft');
+    tap.reset();
+    expect(tap.keyUp('ShiftLeft')).toBe(false);
   });
 });

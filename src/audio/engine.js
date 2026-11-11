@@ -94,6 +94,7 @@ function fuzzCurve(drive) {
 // The last note each gliding voice played, so the next one can slide from it
 const GLIDE_WITHIN = 1.5; // seconds: a longer pause starts fresh, no slide
 const lastGlide = new Map();
+const CHORD_GAP = 0.04; // seconds: notes closer than this are one chord, no slide
 
 function startVoice(freq, instrumentId, now = ctx.currentTime) {
   const inst = instrumentById[instrumentId];
@@ -230,9 +231,21 @@ function startPluck(freq, inst, now) {
   const end = now + (inst.veena || inst.pluck).seconds;
   const source = ctx.createBufferSource();
   source.buffer = pluckBuffer(freq, inst);
-  if (inst.settle) {
-    source.detune.setValueAtTime(inst.settle.cents, now);
-    source.detune.setTargetAtTime(0, now, inst.settle.time);
+  // meend: slide in from the previous note when it was close in time and
+  // pitch (but not part of the same chord), then settle onto the pitch
+  let slide = 0;
+  if (inst.glide) {
+    const last = lastGlide.get(inst.id);
+    const since = last ? now - last.at : Infinity;
+    const cents = last ? 1200 * Math.log2(last.freq / freq) : 0;
+    if (since > CHORD_GAP && since < (inst.glideWithin ?? GLIDE_WITHIN) &&
+        Math.abs(cents) > 1 && Math.abs(cents) <= 100 * (inst.glideRange ?? 12)) slide = cents;
+    lastGlide.set(inst.id, { freq, at: now });
+  }
+  const startCents = slide + (inst.settle?.cents ?? 0);
+  if (startCents) {
+    source.detune.setValueAtTime(startCents, now);
+    source.detune.setTargetAtTime(0, now, slide ? inst.glide / 3 : inst.settle.time);
   }
 
   const out = ctx.createGain();

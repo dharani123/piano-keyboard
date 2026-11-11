@@ -2,26 +2,52 @@ import { SEMITONES } from '../data/keymap.js';
 
 // Rhythm patterns: space-separated notes, each with an optional length in
 // beats after "/" (default 1). "r" is a rest, "|" a bar line (display only).
-//   "C C D/2 | E/0.5 E/0.5 r G/2"
+// Notes joined by commas are a chord: one event per note, all on the same beat.
+// "~" after a note ties it to the next one, which must be the same pitch: one press, held for both.
+//   "C C D/2 | E/0.5 E/0.5 r G/2 | C,E,G/2 F,A,C+/2 | G/2~ | G/2"
 export function parseRhythm(text) {
   const events = [];
   let beat = 0;
   let bar = 0;
+  let tiedFrom = null; // the note the previous token tied onward
   for (const token of text.split(/\s+/).filter(Boolean)) {
     if (token === '|') { bar++; continue; }
-    const match = token.match(/^([A-G]#?|r)([+-]*)(?:\/([\d.]+))?$/);
-    if (!match) throw new Error(`Bad rhythm token "${token}"`);
-    const [, name, shifts, len] = match;
-    const beats = len ? Number(len) : 1;
-    const rest = name === 'r';
-    const oct = [...shifts].reduce((sum, c) => sum + (c === '+' ? 1 : -1), 0);
-    events.push({ name, semitone: rest ? null : SEMITONES[name], oct, beat, beats, rest, bar });
+    const whole = token.match(/^([^/~]+)(?:\/([\d.]+))?(~)?$/);
+    if (!whole) throw new Error(`Bad rhythm token "${token}"`);
+    const beats = whole[2] ? Number(whole[2]) : 1;
+    if (tiedFrom) {
+      const same = `${tiedFrom.name}${tiedFrom.shifts}` === whole[1];
+      if (!same) throw new Error(`Tie to a different note at "${token}"`);
+      tiedFrom.event.beats += beats;
+      beat += beats;
+      if (!whole[3]) tiedFrom = null;
+      continue;
+    }
+    for (const part of whole[1].split(',')) {
+      const match = part.match(/^([A-G]#?|r)([+-]*)$/);
+      if (!match) throw new Error(`Bad rhythm token "${token}"`);
+      const [, name, shifts] = match;
+      const rest = name === 'r';
+      const oct = [...shifts].reduce((sum, c) => sum + (c === '+' ? 1 : -1), 0);
+      events.push({ name, semitone: rest ? null : SEMITONES[name], oct, beat, beats, rest, bar });
+      if (whole[3]) tiedFrom = { name, shifts, event: events.at(-1) };
+    }
     beat += beats;
   }
   return events;
 }
 
-export const totalBeats = events => events.reduce((sum, e) => sum + e.beats, 0);
+export const totalBeats = events => Math.max(0, ...events.map(e => e.beat + e.beats));
+
+// Events gathered by the beat they start on, so a chord is one slot
+export function slotsOf(events) {
+  const slots = [];
+  for (const e of events) {
+    if (slots.at(-1)?.beat === e.beat) slots.at(-1).notes.push(e);
+    else slots.push({ beat: e.beat, beats: e.beats, rest: e.rest, notes: [e] });
+  }
+  return slots;
+}
 
 // Timing windows in seconds, and the points each grade is worth
 export const GRADES = [

@@ -2,7 +2,7 @@ import { parseNotes } from '../data/songs.js';
 
 // The course, in the order a piano teacher would take a beginner through it:
 // orientation → rhythm → intervals & hand position → ear (name that note) → scales → chords →
-// scales in depth → chords in depth → major & minor and dim/aug/sus on every note → feel-good major and minor chords. Songs live in the Western Music tab (Easy / Medium / Hard).
+// scales in depth → chords in depth → major & minor and dim/aug/sus on every note → feel-good major, minor, mixed and sus chords, smooth changes and rhythms. Songs live in the Western Music tab (Easy / Medium / Hard).
 //
 // Theory blocks: a string is a paragraph; { list }, { tip }, and
 // { keys: { mark: [...notes], labels: { note: text } }, caption } draws a
@@ -14,9 +14,10 @@ import { parseNotes } from '../data/songs.js';
 //      play   – notes the app plays when the step starts (ear training)
 //      listen – notes behind a "Hear it" button (chord demos)
 //      exercise.demo – list of chords behind a "Hear the whole loop" button
-//   { type: 'rhythm', bpm, pattern }  – timed play-along, see rhythm.js
+//   { type: 'rhythm', bpm, pattern, labels? }  – timed play-along, see rhythm.js
+//      labels – chord names for the lane, by the beat they start on
 //   { type: 'ear', pool, count, reference, ... } – name the note you hear, see ear/rounds.js
-//   { type: 'playlist', breakSeconds, lessons } – step lessons in a row, with a break between
+//   { type: 'playlist', breakSeconds, lessons } – step or rhythm lessons in a row, with a break between
 
 const notes = text => parseNotes(text);
 const note = text => parseNotes(text)[0];
@@ -212,6 +213,24 @@ const CALM_CHORDS = {
   Gm: { label: 'Gm', text: 'G A# D+', names: 'G B♭ D' },
   Am: { label: 'Am', text: 'E A C+', names: 'E A C' },
   Bm: { label: 'Bm', text: 'F# B D+', names: 'F♯ B D' },
+  // sus chords: the middle note of a chord moved one or two keys, so each sits next to its plain chord
+  Csus2: { label: 'Csus2', text: 'C D G', names: 'C D G' },
+  Csus4: { label: 'Csus4', text: 'C F G', names: 'C F G' },
+  Dsus2: { label: 'Dsus2', text: 'D E A', names: 'D E A' },
+  Dsus4: { label: 'Dsus4', text: 'D G A', names: 'D G A' },
+  Fsus2: { label: 'Fsus2', text: 'F G C+', names: 'F G C' },
+  Fsus4: { label: 'Fsus4', text: 'F A# C+', names: 'F B♭ C' },
+  Gsus2: { label: 'Gsus2', text: 'G A D+', names: 'G A D' },
+  Gsus4: { label: 'Gsus4', text: 'G C+ D+', names: 'G C D' },
+  Asus2: { label: 'Asus2', text: 'E A B', names: 'E A B' },
+  Asus4: { label: 'Asus4', text: 'E A D+', names: 'E A D' },
+  // inversions: the same chords with their notes reordered so the hand stays around C
+  'F/C': { label: 'F', text: 'C F A', names: 'C F A' },
+  'G/D': { label: 'G', text: 'D G B', names: 'D G B' },
+  'Am/C': { label: 'Am', text: 'C E A', names: 'C E A' },
+  'Ab/C': { label: 'A♭', text: 'C D# G#', names: 'C E♭ A♭' },
+  'Bb/D': { label: 'B♭', text: 'D F A#', names: 'D F B♭' },
+  'Fm/C': { label: 'Fm', text: 'C F G#', names: 'C F A♭' },
 };
 const calmLine = k => {
   const c = CALM_CHORDS[k];
@@ -306,7 +325,7 @@ const CALM_LESSONS = [
   {
     id: 'home-and-back', title: 'Home and back', loop: ['C', 'G', 'F', 'C'], rounds: 3,
     theory: 'You leave home, reach a little, and settle back. Ending F → C is the warm "amen" sound, which is why it feels so restful.',
-    tip: 'Turn on the Sustain pedal (Space) and the chords will melt into each other.',
+    tip: 'Turn on the on-screen Sustain pedal button and the chords will melt into each other.',
   },
   {
     id: 'sunny-walk', title: 'Sunny walk', loop: ['C', 'F', 'G', 'F'], rounds: 3,
@@ -360,6 +379,13 @@ const playlistLesson = (id, title, theory, lessons) => ({
   exercise: { type: 'playlist', breakSeconds: 10, lessons: lessons.map(({ title, exercise }) => ({ title, exercise })) },
 });
 
+// The Relax lesson that closes each feel-good unit: every lesson in that unit, one after another
+const relaxLesson = (id, lessons, howItPlays = 'Each lesson plays as usual, with no timer.') => playlistLesson(id, 'Relax', [
+  `Sit back and play the whole unit, one lesson after another, from ${lessons[0].title} to ${lessons.at(-1).title}.`,
+  `${howItPlays} After each one you get a 10-second break, then the next starts by itself.`,
+  { tip: 'It takes a while, so pick a time when you can let it flow. Your stars here are the average across all the lessons.' },
+], lessons);
+
 // Same idea in minor: most loops rest on Am, and every chord in them is minor.
 const CALM_MINOR_LESSONS = [
   {
@@ -370,7 +396,7 @@ const CALM_MINOR_LESSONS = [
   {
     id: 'minor-evening-rain', title: 'Evening rain', loop: ['Am', 'Em', 'Dm', 'Am'], rounds: 3,
     theory: 'Gentle and a little grey, like watching rain from indoors. The loop drifts away from Am, then Dm leads it softly home.',
-    tip: 'The E key stays held from Am to Em. Turn on Sustain (Space) and let the chords blur together.',
+    tip: 'The E key stays held from Am to Em. Turn on the Sustain pedal button and let the chords blur together.',
   },
   {
     id: 'minor-quiet-walk', title: 'Quiet walk', loop: ['Am', 'Dm', 'Em', 'Dm'], rounds: 3,
@@ -422,6 +448,263 @@ const minorSurpriseLesson = surpriseLesson({
   theory: 'All seven white-key minor chords in a random order, so your hands learn each shape on its own. Every chord comes up three times, the order changes each time you play, and you finish on Am.',
   tip: 'Glance at the next chord name, find the shape, then press. Speed will come by itself.',
 });
+
+const FEEL_GOOD_MINOR = [...CALM_MINOR_LESSONS.map(calmLesson), minorSurpriseLesson];
+
+// Major and minor together: most loops rest on C, and each one holds both colours.
+const CALM_MIXED_LESSONS = [
+  {
+    id: 'mix-two-moods', title: 'Two moods', loop: ['C', 'Am'], rounds: 4,
+    theory: 'C and Am share two notes, C and E, so moving between them is more like a change of light than a change of place. Bright, then soft, then bright again.',
+    tip: 'Am is played with E at the bottom so it fits your keys. The E key stays held the whole time.',
+  },
+  {
+    id: 'mix-warm-blanket', title: 'Warm blanket', loop: ['C', 'Am', 'F', 'G'], rounds: 3,
+    theory: 'One of the most loved chord loops there is. Am dips into something tender, F opens it back up, and G leans you towards home.',
+    tip: 'Hold each chord until it has nearly faded. There is no timer here.',
+  },
+  {
+    id: 'mix-soft-landing', title: 'Soft landing', loop: ['C', 'Em', 'F', 'C'], rounds: 3,
+    theory: 'Em is C with one note moved, so it feels like a slight shadow crossing the room. F then lifts the mood and settles you back on C.',
+    tip: 'Turn on the on-screen Sustain pedal button and the chords will melt into each other.',
+  },
+  {
+    id: 'mix-sunday-morning', title: 'Sunday morning', loop: ['F', 'G', 'Em', 'Am'], end: 'C', rounds: 3,
+    theory: 'This loop never lands on home, so it just keeps floating. It rises through F and G, then sinks gently through Em and Am. Only the very last chord brings you to C.',
+    tip: 'Dream Keys suits this one nicely. Pick it in the Voice panel.',
+  },
+  {
+    id: 'mix-slow-river', title: 'Slow river', loop: ['Am', 'F', 'C', 'G'], end: 'C', rounds: 3,
+    theory: 'Starting on Am makes the whole loop feel thoughtful, even though most of its chords are major. It keeps flowing and never quite stops.',
+    tip: 'Try playing the bottom note first, then the other two, for a soft rolling sound.',
+  },
+  {
+    id: 'mix-wistful', title: 'Wistful', loop: ['C', 'Em', 'Am', 'F', 'C'], rounds: 3,
+    theory: 'Each chord sinks a little lower in mood, from C through Em to Am. F then catches you, and you come home.',
+    tip: 'Linger on the Am. It is the quiet centre of this one.',
+  },
+  {
+    id: 'mix-bittersweet', title: 'Bittersweet', loop: ['C', 'F', 'Fm', 'C'], rounds: 3,
+    theory: 'F turning into Fm is one of the prettiest small moves in music. Just one finger slides down a key, A to A♭, and a happy chord turns tender. Then C feels like a sigh of relief.',
+    tip: 'Only one finger moves from F to Fm. Do it slowly and listen to the colour change.',
+  },
+  {
+    id: 'mix-evening-glow', title: 'Evening glow', loop: ['Dm', 'G', 'C', 'Am'], end: 'C', rounds: 3,
+    theory: 'Dm to G to C is the classic way home in jazz and old songs, so reaching C feels very satisfying. Am then drifts away so the loop can start again.',
+    tip: 'Chorus Pad suits this one nicely. Pick it in the Voice panel.',
+  },
+  {
+    id: 'mix-long-evening', title: 'Long evening', loop: ['C', 'Am', 'F', 'G', 'C', 'Em', 'F', 'Fm', 'C'], rounds: 2,
+    theory: 'A wind-down through the favourites: the warm blanket, the soft landing and the bittersweet slide, one after another. Nothing to get right, just let it drift.',
+    tip: 'Play this one as slowly as you like, ideally with Sustain on.',
+  },
+  {
+    id: 'mix-up-and-back', title: 'Up the white keys and back', loop: ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'G', 'F', 'Em', 'Dm', 'C'], rounds: 1,
+    theory: 'The chords that belong to C major, from C up to Am and back down, using only white keys. Listen to how major and minor take turns. The seventh chord, on B, is tense rather than calm, so it stays out.',
+    tip: 'Keep the same three-finger shape and step along. Only Am changes shape, with E at the bottom.',
+  },
+];
+
+const mixedSurpriseLesson = surpriseLesson({
+  id: 'calm-mix-surprise',
+  title: 'Surprise mixed chords',
+  chords: ['C', 'Dm', 'Em', 'F', 'G', 'Am'],
+  home: 'C',
+  theory: 'The same six chords of C major in a random order, so your hands learn to switch between major and minor shapes. Every chord comes up three times, the order changes each time you play, and you finish on C.',
+  tip: 'Before you press, guess whether the next chord will sound bright or soft. It is good ear practice too.',
+});
+
+const FEEL_GOOD_MIXED = [...CALM_MIXED_LESSONS.map(calmLesson), mixedSurpriseLesson];
+
+// ---- Feel-good sus chords, smooth changes and rhythms (added 2026-11-06) ----
+// Sus chords lean away from a plain chord and settle back onto it.
+const CALM_SUS_LESSONS = [
+  {
+    id: 'sus-lean-and-settle', title: 'Lean and settle', loop: ['C', 'Csus4'], rounds: 4,
+    theory: 'A sus chord swaps the middle note for a neighbour. Csus4 lifts E up to F, and the chord seems to lean forward. Let it drop back to C and you can hear it settle.',
+    tip: 'Only one finger moves, the one on the middle note. Keep the other two pressed down if you can.',
+  },
+  {
+    id: 'sus-open-air', title: 'Open air', loop: ['C', 'Csus2'], rounds: 4,
+    theory: 'Csus2 moves the middle note the other way, from E down to D. It has neither the brightness of major nor the softness of minor, just an open, airy sound.',
+    tip: 'Sus chords love a long ring. Turn on the Sustain pedal button and leave plenty of time between chords.',
+  },
+  {
+    id: 'sus-both-ways', title: 'Both ways', loop: ['C', 'Csus4', 'C', 'Csus2'], rounds: 3,
+    theory: 'Now the middle finger goes both ways: up to lean, back home, down to open up, back home. The same three-note hand makes four different moods.',
+    tip: 'Your thumb and little finger never leave C and G.',
+  },
+  {
+    id: 'sus-coming-home', title: 'Coming home', loop: ['C', 'F', 'Gsus4', 'G'], rounds: 3,
+    theory: 'Gsus4 holds back for a moment before G arrives, which makes the return to C feel earned. This little delay is one of the oldest tricks in music.',
+    tip: 'From F to Gsus4 your hand steps up two keys, then one finger drops from C to B.',
+  },
+  {
+    id: 'sus-soft-lean', title: 'Soft lean', loop: ['Am', 'Asus4', 'Am', 'Asus2'], rounds: 3,
+    theory: 'Sus chords work on minor chords too. Around Am the same two moves sound more wistful, as though the chord keeps nearly saying something.',
+    tip: 'Am is played with E at the bottom, so here it is your top finger that moves: up to D for Asus4, down to B for Asus2.',
+  },
+  {
+    id: 'sus-two-sighs', title: 'Two sighs', loop: ['Am', 'Asus4', 'Am', 'Dm', 'Dsus4', 'Dm'], rounds: 2,
+    theory: 'A sigh on Am, then the same sigh on Dm. Dsus4 lifts F up to G, and it falls back just as gently.',
+    tip: 'Say "lean, settle" under your breath as you play. It helps the rhythm of the sigh.',
+  },
+  {
+    id: 'sus-wide-open', title: 'Wide open', loop: ['Csus2', 'Fsus2', 'Gsus2', 'Fsus2'], end: 'C', rounds: 3,
+    theory: 'Nothing but open chords, so the music floats with nowhere it has to be. The plain C at the very end feels like touching the ground.',
+    tip: 'The hand shape never changes on the way. Just slide it from chord to chord.',
+  },
+  {
+    id: 'sus-long-settle', title: 'Long settle', loop: ['C', 'Csus4', 'C', 'F', 'Fsus4', 'F', 'Gsus4', 'G', 'Am', 'Asus4', 'Am', 'F'], rounds: 2,
+    theory: 'A wind-down through the unit: every plain chord gets its own lean before moving on. Nothing to get right, just let it drift.',
+    tip: 'Play this one as slowly as you like, ideally with Sustain on.',
+  },
+];
+
+const susSurpriseLesson = surpriseLesson({
+  id: 'calm-sus-surprise',
+  title: 'Surprise sus chords',
+  chords: ['Csus2', 'Csus4', 'Dsus2', 'Dsus4', 'Fsus2', 'Gsus2', 'Gsus4'],
+  home: 'C',
+  theory: 'Seven sus chords in a random order, so your hands learn each shape on its own. Every chord comes up three times, the order changes each time you play, and you finally settle on plain C.',
+  tip: 'Every chord here is on white keys only. Glance at the name, find the shape, then press.',
+});
+
+const FEEL_GOOD_SUS = [...CALM_SUS_LESSONS.map(calmLesson), susSurpriseLesson];
+
+// The same kinds of loop as before, with inversions, so the hand stays put around C.
+const CALM_SMOOTH_LESSONS = [
+  {
+    id: 'smooth-one-finger', title: 'One finger', loop: ['C', 'Am/C'], rounds: 4,
+    theory: 'An inversion is a chord with its notes in a different order. Played as C E A, Am is only one finger away from C, so the change sounds like one voice moving, not a whole hand jumping.',
+    tip: 'Listen to the top note: G rises to A and comes back. The other two never move.',
+  },
+  {
+    id: 'smooth-anchor', title: 'The anchor', loop: ['C', 'F/C'], rounds: 4,
+    theory: 'C and F share the note C, so your little finger can stay pressed the whole time, like an anchor, while the other two fingers rise and fall.',
+    tip: 'Compare with Gentle sway in the major unit, where the hand had to jump. Same chords, much calmer.',
+  },
+  {
+    id: 'smooth-home-and-back', title: 'Close to home', loop: ['C', 'F/C', 'C', 'G/D'], rounds: 3,
+    theory: 'C, F and G are the three most useful chords there are. Close together like this, they sound like a pianist playing rather than a learner hopping between shapes.',
+    tip: 'G is played as D G B. Your whole hand shifts up by only two keys.',
+  },
+  {
+    id: 'smooth-sunny-walk', title: 'Small steps', loop: ['C', 'G/D', 'Am/C', 'F/C'], rounds: 3,
+    theory: 'The famous four-chord loop, with every chord next to the last one. It is the same harmony as Sunny walk, but it barely leaves the middle of your keyboard.',
+    tip: 'Before each change, look at which fingers can stay where they are.',
+  },
+  {
+    id: 'smooth-minor-drift', title: 'Minor drift', loop: ['Am/C', 'Dm', 'Am/C', 'Em'], rounds: 3,
+    theory: 'Inversions work just as well on minor chords. Am drifts to Dm and back, then up to Em, and each change is small and quiet.',
+    tip: 'From Am to Dm, the top note A stays where it is.',
+  },
+  {
+    id: 'smooth-open-road', title: 'Short road', loop: ['C', 'Bb/D', 'F/C'], rounds: 3,
+    theory: 'The relaxed B♭ to F move from Open road, with the chords folded close together. B♭ is played with D at the bottom, right next to your C.',
+    tip: 'From B♭ to F, one note stays, one drops a single key, and one drops two.',
+  },
+  {
+    id: 'smooth-soft-sunrise', title: 'Slow sunrise', loop: ['C', 'Ab/C', 'Bb/D'], rounds: 3,
+    theory: 'A♭ and B♭ come from outside C major, and they usually make the hand travel. Played this way, the three chords sit side by side and the colour changes without the hand going anywhere.',
+    tip: 'From A♭ to B♭, all three fingers step up two keys together.',
+  },
+  {
+    id: 'smooth-bittersweet', title: 'One note sadder', loop: ['C', 'F/C', 'Fm/C'], rounds: 3,
+    theory: 'F to Fm is a single note falling from A to A♭, and it is one of the most touching small moves in music. Then C comes back like a smile.',
+    tip: 'Your little finger stays on C for all three chords.',
+  },
+  {
+    id: 'smooth-long-drift', title: 'Long, smooth drift', loop: ['C', 'G/D', 'Am/C', 'F/C', 'C', 'F/C', 'Fm/C', 'C', 'Bb/D', 'F/C'], rounds: 2,
+    theory: 'A wind-down through the favourites, with your hand resting around the same few keys from start to finish. Nothing to get right, just let it drift.',
+    tip: 'Play this one as slowly as you like, ideally with Sustain on.',
+  },
+];
+
+const smoothSurpriseLesson = surpriseLesson({
+  id: 'calm-smooth-surprise',
+  title: 'Surprise smooth chords',
+  chords: ['C', 'Dm', 'Em', 'F/C', 'G/D', 'Am/C'],
+  home: 'C',
+  theory: 'The six calm chords of C major in a random order, all held close together. Every chord comes up three times, the order changes each time you play, and you finish on C.',
+  tip: 'Try to move as few fingers as you can. A good chord change is a lazy one.',
+});
+
+const FEEL_GOOD_SMOOTH = [...CALM_SMOOTH_LESSONS.map(calmLesson), smoothSurpriseLesson];
+
+// Chords in time, to a slow click. Each loop chord gets one bar of `cell` (lengths in beats,
+// negative = rest) and the piece ends on one long home chord. They use the close chords above
+// and never D major, whose two-key shortcut is for untimed lessons.
+function calmRhythmLesson({ id, title, loop, cell, rounds, bpm, beatsPerBar = 4, theory, tip }) {
+  const home = loop[0];
+  const barBeats = cell.reduce((sum, b) => sum + Math.abs(b), 0);
+  const chord = k => CALM_CHORDS[k].text.replaceAll(' ', ',');
+  const bar = k => cell.map(b => (b < 0 ? `r/${-b}` : `${chord(k)}/${b}`)).join(' ');
+  const order = Array.from({ length: rounds }, () => loop).flat();
+  const labels = Object.fromEntries([...order, home].map((k, i) => [i * barBeats, CALM_CHORDS[k].label]));
+  return {
+    id: `calm-${id}`,
+    title,
+    theory: [
+      `**${[...loop, home].map(k => CALM_CHORDS[k].label).join(' – ')}**`,
+      theory,
+      { list: [...new Set(loop)].map(calmLine) },
+      { tip },
+    ],
+    exercise: {
+      type: 'rhythm',
+      bpm,
+      ...(beatsPerBar !== 4 && { beatsPerBar }),
+      labels,
+      pattern: [...order.map(bar), `${chord(home)}/${barBeats}`].join(' | '),
+    },
+  };
+}
+
+const CALM_RHYTHM_LESSONS = [
+  {
+    id: 'rhythm-four-slow-beats', title: 'Four slow beats', loop: ['C', 'F/C'], cell: [4], rounds: 3, bpm: 72,
+    theory: 'Time to play to a click. Each chord lasts a whole bar of four beats, so all you do is change chord on beat one and count: **1** 2 3 4.',
+    tip: 'Press Listen first, and try the 50% speed button if it feels rushed. Every note of a chord is timed, so press them together.',
+  },
+  {
+    id: 'rhythm-two-and-two', title: 'Two and two', loop: ['C', 'Am/C'], cell: [2, 2], rounds: 3, bpm: 72,
+    theory: 'Now each chord is played twice in its bar, on beats 1 and 3. Lift your hand a little between them, so that the second press really happens.',
+    tip: 'Count **1** 2 **3** 4 and press on the bold numbers.',
+  },
+  {
+    id: 'rhythm-steady-steps', title: 'Steady steps', loop: ['C', 'G/D', 'Am/C', 'F/C'], cell: [1, 1, 1, 1], rounds: 2, bpm: 66,
+    theory: 'A chord on every beat, like slow footsteps. This is the plainest kind of accompaniment, and it sounds lovely under a tune.',
+    tip: 'Keep your presses soft and even. Change chord on beat one, and not a moment before.',
+  },
+  {
+    id: 'rhythm-long-short-short', title: 'Long, short, short', loop: ['C', 'F/C'], cell: [2, 1, 1], rounds: 3, bpm: 72,
+    theory: 'One long chord, then two short ones. This little pattern gives a loop a gentle rocking motion.',
+    tip: 'Count **1** 2 **3** **4**, or say "long, short short".',
+  },
+  {
+    id: 'rhythm-short-short-long', title: 'Short, short, long', loop: ['Am/C', 'F/C', 'C', 'G/D'], cell: [1, 1, 2], rounds: 2, bpm: 72,
+    theory: 'The same pattern turned around, so each bar leans towards its long chord and comes to rest there.',
+    tip: 'Count **1** **2** **3** 4, and enjoy beat 4 as a small rest for your hand.',
+  },
+  {
+    id: 'rhythm-little-breath', title: 'A little breath', loop: ['C', 'F/C', 'G/D', 'F/C'], cell: [1, -1, 2], rounds: 2, bpm: 72,
+    theory: 'A chord, a beat of silence, then a longer chord. Leaving a gap is part of the rhythm too, and it makes a loop feel unhurried.',
+    tip: 'Turn Sustain off for this one, so that you can hear the gap.',
+  },
+  {
+    id: 'rhythm-slow-waltz', title: 'Slow waltz', loop: ['C', 'Am/C', 'F/C', 'G/D'], cell: [2, 1], rounds: 2, bpm: 84, beatsPerBar: 3,
+    theory: 'Three beats in a bar instead of four: long, short, long, short. It gives everything a slow, swaying waltz feel.',
+    tip: 'Count **1** 2 **3**. The click is louder on each beat one.',
+  },
+  {
+    id: 'rhythm-gentle-push', title: 'Gentle push', loop: ['C', 'G/D', 'Am/C', 'F/C'], cell: [1.5, 1.5, 1], rounds: 2, bpm: 63,
+    theory: 'The second chord comes a little before beat 3, which gives the loop a soft push forward. You will hear this pattern under a great many pop songs.',
+    tip: 'Say "1 and 2 and 3 and 4 and" slowly: the chords land on 1, on the "and" after 2, and on 4. Use 50% speed at first.',
+  },
+];
+
+const FEEL_GOOD_RHYTHMS = CALM_RHYTHM_LESSONS.map(calmRhythmLesson);
 
 const FINGERS = [
   { label: 'L5', name: 'C', text: 'Left hand, finger **5** (pinky)' },
@@ -492,7 +775,7 @@ export const UNITS = [
             list: [
               'Left hand: pinky (5) on `S`, ring (4) on `D`, middle (3) on `F`, index (2) on `G`',
               'Right hand: index (2) on `H`, middle (3) on `J`, ring (4) on `K`, pinky (5) on `L`',
-              'Both thumbs (1) rest on `Space`, which is your sustain pedal',
+              'Both thumbs (1) rest on `Space`, which starts, stops and retries exercises',
             ],
           },
           'You will get finger numbers instead of note names. Play each one without looking down. If you miss twice, the key glows.',
@@ -719,7 +1002,7 @@ export const UNITS = [
       ], { pool: ALL_TWELVE, count: 20, reference: 'start', randomVoice: true }),
       earLesson('ear-quick', 'Quick ear', [
         'The final test: **3 seconds** to answer each note. Too slow counts as a miss.',
-        'Fast recognition means the note is truly in your ear, not worked out. Pass this and the **Ear Gym** opens for daily practice. 🎧',
+        'Fast recognition means the note is truly in your ear, not worked out. 🎧',
       ], { pool: ALL_TWELVE, count: 20, reference: 'start', timeLimit: 3000 }),
     ],
   },
@@ -1294,7 +1577,7 @@ export const UNITS = [
           'An **arpeggio** is a chord spread out one note at a time, up and down. Pianists use arpeggios for flowing accompaniments, and they train your hand to *know* each chord shape.',
           'Play each chord as an arpeggio through two octaves of notes: **root, 3rd, 5th, root**, then back down.',
           { list: ['**C**: C E G C', '**Am**: A C E (high)', '**F**: F A C F (high)', '**G7**: G B D F'] },
-          { tip: 'Keep it even, like a music box. Then try the same thing freely with the sustain pedal (Space) held down.' },
+          { tip: 'Keep it even, like a music box.' },
         ],
         exercise: {
           type: 'steps',
@@ -1328,17 +1611,37 @@ export const UNITS = [
     // every lesson stays open (allOpen) so you can pick whichever suits your mood.
     openStart: true,
     allOpen: true,
-    lessons: [...FEEL_GOOD_MAJOR, playlistLesson('calm-relax', 'Relax', [
-      'Sit back and play the whole unit, one lesson after another, from Gentle sway to Surprise chords.',
-      'Each lesson plays as usual, with no timer. After each one you get a 10-second break, then the next starts by itself.',
-      { tip: 'It takes a while, so pick a time when you can let it flow. Your stars here are the average across all the lessons.' },
-    ], FEEL_GOOD_MAJOR)],
+    lessons: [...FEEL_GOOD_MAJOR, relaxLesson('calm-relax', FEEL_GOOD_MAJOR)],
   },
   {
     title: 'Feel-good minor chords',
     openStart: true,
     allOpen: true,
-    lessons: [...CALM_MINOR_LESSONS.map(calmLesson), minorSurpriseLesson],
+    lessons: [...FEEL_GOOD_MINOR, relaxLesson('calm-minor-relax', FEEL_GOOD_MINOR)],
+  },
+  {
+    title: 'Feel-good mixed chords',
+    openStart: true,
+    allOpen: true,
+    lessons: [...FEEL_GOOD_MIXED, relaxLesson('calm-mix-relax', FEEL_GOOD_MIXED)],
+  },
+  {
+    title: 'Feel-good sus chords',
+    openStart: true,
+    allOpen: true,
+    lessons: [...FEEL_GOOD_SUS, relaxLesson('calm-sus-relax', FEEL_GOOD_SUS)],
+  },
+  {
+    title: 'Feel-good smooth changes',
+    openStart: true,
+    allOpen: true,
+    lessons: [...FEEL_GOOD_SMOOTH, relaxLesson('calm-smooth-relax', FEEL_GOOD_SMOOTH)],
+  },
+  {
+    title: 'Feel-good rhythms',
+    openStart: true,
+    allOpen: true,
+    lessons: [...FEEL_GOOD_RHYTHMS, relaxLesson('calm-rhythm-relax', FEEL_GOOD_RHYTHMS, 'Each lesson starts by itself after four clicks and plays in time, at the speed you last picked.')],
   },
 ];
 

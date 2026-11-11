@@ -15,6 +15,10 @@ const BROWSER_ONLY = [
   'desk-piano-open-lesson-unit',
   'desk-piano-open-sheet-lesson',
   'desk-piano-open-sheet-lesson-unit',
+  'desk-piano-open-scales-lesson',
+  'desk-piano-open-scales-lesson-unit',
+  'desk-piano-open-identify-lesson',
+  'desk-piano-open-identify-lesson-unit',
 ];
 const synced = key => key.startsWith(PREFIX) && !BROWSER_ONLY.includes(key);
 const URL = '/__progress';

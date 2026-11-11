@@ -256,6 +256,9 @@ export default function RelaxMode({ piano, modeSwitch }) {
 
   const r = run.current;
   const active = step !== 'idle';
+  const startStopNow = useRef();
+  startStopNow.current = active ? stop : start;
+  useEffect(() => piano.onStartStop(() => startStopNow.current()), []);
   const fall = (step === 'play' || step === 'listen') && r?.play
     ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={line.layout} gentle listen={r.listenNotes} />
     : <FallSpace slot={piano.fallSlot} />;

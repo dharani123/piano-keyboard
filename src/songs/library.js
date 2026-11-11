@@ -5,6 +5,7 @@ import { parseSong } from './parse.js';
 // track only (the chords found in the user's tutorial recording, not its melody).
 // "Decoded songs" are melodies the user transcribed from their own recordings
 // (sheet music made with an online transcriber), kept for their own practice.
+// Each decoded song names its `scale`, one of the Scales tab's 24 (scales/curriculum.js).
 const RAW = [
   {
     id: 'hot-cross-buns',
@@ -150,6 +151,7 @@ const RAW = [
     level: 'Decoded songs',
     bpm: 158,
     decoded: true,
+    scale: 'A major',
     hint: "Right-hand melody from your Songscription sheet, in A major: keys F Y U J K P ' (E F♯ G♯ A B, high C♯ E). Try it on Dream Keys (Shift+3), and start at a slower speed.",
     // Right hand only, from the user's Songscription sheet of the Men I Trust
     // piano part, A major; tied notes are joined into one long note.
@@ -165,6 +167,7 @@ const RAW = [
     level: 'Decoded songs',
     bpm: 75,
     decoded: true,
+    scale: 'F♯ minor',
     // the tune climbs to A5, so the keys slide two places for this song (row = D4…A5)
     layout: -2,
     hint: "Right-hand melody from your Songscription sheet, in F♯ minor. The keys slide two places for this song (E is on S, A on G, high C♯ on I, high A on Enter). It has fast runs, so start with Listen & play at 50%.",
@@ -189,6 +192,7 @@ const RAW = [
     level: 'Decoded songs',
     bpm: 180,
     decoded: true,
+    scale: 'E major',
     hint: "Right-hand melody merged from your two Songscription sheets, in E major: keys E F Y U J K (C♯ E F♯ G♯ A B). It lives on F♯ and G♯ (Y and U), so keep those two fingers ready. At 180 BPM the beats go by fast, so start at 50–75%.",
     // Right hand only, merged from two Songscription sheets of "Namo Namo" (Kedarnath),
     // E major, q = 180. Opening (5 bars of 6/8) from the second sheet (first 15 s),
@@ -209,6 +213,7 @@ const RAW = [
     level: 'Decoded songs',
     bpm: 80,
     decoded: true,
+    scale: 'D major',
     hint: "Right-hand melody from your Songscription sheet, in D major: keys E D F Y H J K P ; ' (C♯ D E F♯ G A B, high C♯ D E). It walks down step by step from high D, so let your hand drift left bar by bar. The 16th-note pairs at the end of bars 1–3 are quick, so start with Listen & play at 75%.",
     // Right hand only, from the user's Songscription sheet of "Ram Ram", D major, 4/4, q = 80.
     // Chords: D Dmaj7 Bm7 | D/A G | D/F# Em7 | A/E D/A | D. Tied D4 in bar 4 joined.
@@ -217,6 +222,182 @@ const RAW = [
               G/1.5 A/0.5 F#/1.5 G/0.25 F#/0.25 |
               E/0.75 D/0.75 C#/0.5 E/0.75 F#/0.75 A/0.5 |
               D+/1 r/3`,
+  },
+  {
+    id: 'rangulu-ranguley',
+    title: 'Rangulu Ranguley (piano melody)',
+    level: 'Decoded songs',
+    bpm: 83,
+    decoded: true,
+    scale: 'D♭ major',
+    // the tune reaches G♭5, so the keys slide one place for this song (row = C4…G5)
+    layout: -1,
+    hint: "Right-hand melody from your Songscription sheet, in D♭ major. The keys slide one place for this song, so C is on A: W F T Y U O (D♭ F G♭ A♭ B♭, high D♭), plus K P ' ] for high C E♭ F G♭. Bars 5 and 7 to 8 have fast 16th-note runs, so listen first and start at 50%.",
+    // Right hand only, from the user's Songscription sheet of "Rangulu Ranguley" (Ramayana),
+    // D♭ major, 4/4, q = 83. Flats are written as sharps (D♭ = C#, E♭ = D#, G♭ = F#, A♭ = G#,
+    // B♭ = A#); tied notes joined. No layout reaches A♭3, so the three low notes go up an
+    // octave: B♭3 and A♭3 in bar 3, B♭3 in bar 5.
+    // Chords: D♭ | | | G♭ | E♭m7 | B | D♭ E♭m7 | Bmaj7 | (bar 9 bass G♭)
+    pattern: `r/0.5 C#+/0.5 C#/0.25 F/0.25 F#/0.5 C#+/0.75 C#/0.25 A#/0.25 C#/0.25 F#/0.25 G#/0.25 |
+              F#/0.25 F/0.5 F#/2.5 C#+/0.25 A#/0.25 F#/0.25 |
+              F/0.75 F#/0.75 A#/0.75 G#/0.75 F#/0.25 F/0.25 G#/0.5 |
+              F#/0.25 F/0.25 F#/3.25 C#/0.25 |
+              F/0.25 F#/0.25 C#+/0.25 A#/0.5 F#/0.25 F/0.25 G#/0.25 C#/0.25 F/0.25 F#/0.25 A#/0.25 C#/0.25 F/0.25 F#/0.25 A#/0.25 |
+              F#/0.25 F/0.5 F#/2.5 F#/0.25 A#/0.25 C+/0.25 |
+              C#+/0.25 G#/0.5 G#/0.75 C#+/0.25 C#+/0.25 C#+/0.25 A#/0.5 A#/0.5 C#+/0.5 C#+/0.25 |
+              C#+/0.25 D#+/0.25 D#+/0.75 F+/0.5 F#+/0.25 F+/0.25 C#+/0.25 C#+/0.25 A#/0.25 A#/0.25 C#+/0.25 C#+/0.5 |
+              G#/0.5 F#/0.25 F/0.75 r/2.5`,
+  },
+  {
+    id: 'povodhe-prema',
+    title: 'Povodhe Prema (piano melody)',
+    level: 'Decoded songs',
+    bpm: 71,
+    decoded: true,
+    scale: 'C♯ minor',
+    hint: "Right-hand melody from your Songscription sheet, in E major / C♯ minor: keys F Y U J K P [ ' (E F♯ G♯ A B, high C♯ D♯ E). The first eight bars are steady eighth notes rocking between two keys, so keep your hand still and let two fingers do the work. Listen first, then try it at 75%.",
+    // Right hand only, from the user's Songscription sheet of "Povodhe Prema" (Oy!), four sharps,
+    // 4/4, q = 71; the screenshot shows 10 bars. Tied notes joined. The sheet spans E4 to E6, too
+    // wide for any layout, so bars 1 to 8 sit an octave lower than written, except the G#4 and
+    // E4 that end bar 8. Bars 9 and 10 are as written. Bar 1 opens with C# A in place of the
+    // sheet's eighth rest and A, at the user's request, so it matches bar 3.
+    // Chords: F#m | C#m | F#m | C#m | A | B | C#m7 | B | Esus4 E/B | (bar 10 not labelled)
+    pattern: `C#+/0.5 A/0.5 C#+/0.5 A/0.5 C#+/0.5 A/0.5 C#+/0.25 D#+/0.25 E+/0.5 |
+              C#+/0.5 G#/0.5 C#+/0.5 G#/0.5 C#+/0.5 G#/0.5 C#+/0.5 G#/0.5 |
+              C#+/0.5 A/0.5 C#+/0.5 A/0.5 C#+/0.5 A/0.5 C#+/0.25 D#+/0.25 E+/0.5 |
+              C#+/0.5 G#/0.5 C#+/0.5 G#/0.5 C#+/0.5 G#/0.5 C#+/0.5 G#/0.5 |
+              C#+/0.5 A/0.5 C#+/0.5 A/0.5 C#+/0.5 A/0.5 C#+/0.5 A/0.5 |
+              D#+/0.5 B/0.5 D#+/0.5 B/0.5 D#+/0.5 B/0.5 D#+/0.5 B/0.5 |
+              E+/0.5 C#+/0.5 E+/0.5 C#+/0.5 E+/0.5 C#+/0.5 E+/0.5 C#+/0.5 |
+              D#+/0.5 B/0.5 D#+/0.5 B/0.5 D#+/0.5 B/0.5 D#+/0.5 G#/0.25 E/0.25 |
+              A/3.5 G#/0.25 F#/0.25 |
+              G#/3.5 G#/0.25 B/0.25`,
+  },
+  {
+    id: 'oye-bgm',
+    title: 'Oye BGM (piano melody)',
+    level: 'Decoded songs',
+    bpm: 138,
+    decoded: true,
+    scale: 'E♭ major',
+    // the tune peaks on G5 once it sits an octave down, so the keys slide two places (row = D4…A5)
+    layout: -2,
+    hint: "Top line of the melody from your Songscription sheet, in E♭ major. The keys slide two places for this song, so D is on A: Y J K O ; ' (B♭, high C D E♭ F G). The tune sways around the same few notes, but 138 BPM moves quickly, so listen first and start at 50%.",
+    // Top note of the right hand only, from the user's Songscription sheet of the "Oy!" piano
+    // BGM, E♭ major, 4/4, q = 138. Flats are written as sharps (E♭ = D#, B♭ = A#); tied notes
+    // joined. The whole tune is one octave below the sheet (B♭5 to G6 as written). The G6 that
+    // ends bar 10 is held through the tied low G5 at the start of bar 11.
+    // Chords: E♭ is the only one marked on the sheet.
+    pattern: `r/3 D#+/0.5 D+/0.5 |
+              D#+/1 A#/2 G+/0.5 C+/1 |
+              A#/1.5 r/0.5 A#/0.5 D#+/0.5 D+/0.5 |
+              D#+/1 A#/2 G+/0.5 C+/1 |
+              A#/2 r/0.5 D#+/0.5 D+/0.5 |
+              D#+/1 A#/2 G+/0.5 C+/1 |
+              A#/1.5 r/1 G+/0.5 F+/0.5 |
+              G+/1.5 F+/0.5 G+/1.5 F+/0.5 |
+              G+/1.5 F+/0.5 G+/0.5 F+/0.5 D#+/0.5 F+/0.5 |
+              G+/1 G+/2 G+/0.5 G+/1 |
+              F+/2 r/0.5 D#+/0.5 D+/0.5 |
+              D#+/2 r/2`,
+  },
+  {
+    id: 'oye-emotional-bgm',
+    title: 'Oye Emotional BGM (piano melody)',
+    level: 'Decoded songs',
+    bpm: 163,
+    decoded: true,
+    scale: 'C major',
+    // the tune reaches A5, so the keys slide two places for this song (row = D4…A5)
+    layout: -2,
+    hint: "Melody from your Songscription sheet, in C major, all white keys. The keys slide two places for this song, so D is on A: A S D F G H J K (D E F G A B, high C D), plus ' Enter for high G A. It is mostly quarter and half notes, but 163 BPM is quick, so listen first and start at 50%.",
+    // Melody from the user's Songscription sheet of the "Oy!" emotional BGM, C major, 4/4,
+    // q = 163, 16 bars. Written with octaves and chords: this takes the top note, except that
+    // the D5+D6 in bar 4 and C5+C6 in bar 5 use the lower note, because C6 and D6 have no key
+    // in any layout that also holds D4. The trill on the C in bar 4 is played as a plain note.
+    // Chords: C | | | | | D | | G | Dm | C | G/D | C | G/D Dm | C | G/D | C
+    pattern: `r/1 E C+ B |
+              C+/4 |
+              r/1 E C+ B |
+              C+/2 D+/2 |
+              r/1 C+ C+ B |
+              A/2 A/2 |
+              r/1 A B A |
+              G/4 |
+              r/1 D G F |
+              F/2 E/2 |
+              A+/2 G+/2 |
+              C+/4 |
+              r/1 A+ G+ F |
+              F/2 E/2 |
+              A+/2 G+/2 |
+              C+/4`,
+  },
+  {
+    id: 'blinding-lights',
+    title: 'Blinding Lights (piano melody)',
+    level: 'Decoded songs',
+    bpm: 171,
+    decoded: true,
+    scale: 'F minor',
+    hint: "The opening riff from your Songscription sheet, right hand only, an octave lower so it fits: keys S R G H I (C E♭ F G B♭). F (G) is home, so keep a finger there. At 171 BPM the beats go by fast, so start at 50–75%.",
+    // Right hand only, from the user's Songscription sheet of The Weeknd's "Blinding Lights",
+    // q = 171, 4/4, 7 bars. Written an octave lower: the sheet runs C5 to B♭5, above the top key.
+    // Tied notes joined. The closing F D B♭ chord takes its top note, F, as in other decoded songs.
+    // Chords: Fm | | Cm | | E♭ | | B♭/F
+    pattern: `F/2 F/1.5 D#/0.5 |
+              F/0.5 G C D#/1.5 |
+              F/2 F/1.5 D#/0.5 |
+              F/0.5 G C D#/1.5 |
+              A#/0.5 G F D#/1.5 |
+              A#/0.5 G F D# F/4.5`,
+  },
+  {
+    id: 'starboy',
+    title: 'Starboy (piano melody)',
+    level: 'Decoded songs',
+    bpm: 93,
+    decoded: true,
+    scale: 'A minor',
+    // the tune reaches A5, so the keys slide two places for this song (row = D4…A5)
+    layout: -2,
+    hint: "Right-hand melody from your Songscription sheet, in A minor, all white keys. The keys slide two places for this song, so D is on A: D F G (F G A), J K L (high C D E), ' Enter (high G A). Most bars repeat one note in a dotted rhythm, so listen first and start at 75%.",
+    // Right hand only, from the user's Songscription sheet of The Weeknd's "Starboy"
+    // (ft. Daft Punk), A minor, 4/4, q = 93, 8 bars. Tied notes joined (the C5 into bar 2,
+    // the A5s into bars 4 and 8).
+    // Chords: Am | G/A | F/A | G/A | Am | G/A | F/A (bars 2-8; bar 1 is the pickup)
+    pattern: `r/3 D+/0.25 D+/0.25 C+/0.25 C+/0.75 |
+              A/1 A/0.5 A/0.75 A/0.75 A/0.5 |
+              r/0.5 G/1 G/0.5 G/0.75 E+/0.25 E+/0.25 G+/0.25 E+/0.25 A+/0.75 |
+              F/1 F/0.5 F/0.75 F/0.75 F/0.5 |
+              r/0.5 G/1 G/0.5 G/0.5 D+/0.25 D+/0.25 D+/0.25 D+/0.25 D+/0.25 D+/0.25 |
+              D+/0.5 C+/0.25 A/0.75 A/0.5 A/0.75 A/0.75 A/0.5 |
+              r/0.5 G/1 G/0.5 G/0.75 E+/0.25 E+/0.25 G+/0.25 E+/0.25 A+/0.75 |
+              r/3.5`,
+  },
+  {
+    id: 'bbm-piano-piece',
+    title: 'B♭ minor piano piece (untitled)',
+    level: 'Decoded songs',
+    bpm: 92,
+    decoded: true,
+    scale: 'B♭ minor',
+    // the tune reaches A♭5, so the keys slide two places for this song (row = D4…A5)
+    layout: -2,
+    hint: "Right-hand melody from your Songscription sheet, in B♭ minor (five flats), almost all black keys. The keys slide two places for this song: Y (B♭), J (C), I O (D♭ E♭), ; (F) and ] (high A♭). The rising D♭ E♭ F run (I O ;) comes back in nearly every bar, so learn it first. 92 BPM is relaxed, so try 75% and then full speed.",
+    // Right hand only, from the user's Songscription sheet (title not shown), B♭ minor, 4/4,
+    // q = 92, 9 bars after a one-beat rest. Chords take their top note. Tied notes joined
+    // (each F5 carried over a bar line, the tied B♭ chords, and the last F5 into the final chord).
+    // Chords: B♭m7 | Fm7/A♭ A♭7 | G♭maj7 | E♭m7 A♭ | B♭m7 | Fm7/A♭ A♭7 | G♭maj7 | E♭m7 A♭ | B♭m
+    pattern: `r/1.5 A#/1 C#+/0.5 D#+/0.5 F+/1 |
+              G#+/1.5 A#/1 F+/0.5 D#+/0.25 F+/0.25 |
+              A#/0.5 D#+/0.5 C#+/0.5 A#/1 C#+/0.5 D#+/0.5 F+/1 |
+              D#+/1.5 C+/1 C#+/1 |
+              A#/1.5 A#/1 C#+/0.5 D#+/0.5 F+/1 |
+              G#+/1.5 A#/1 F+/0.5 D#+/0.25 F+/0.25 |
+              A#/0.5 D#+/0.5 C#+/0.5 A#/1 C#+/0.5 D#+/0.5 F+/1 |
+              D#+/1.5 C+/1 C#+/1 |
+              F+/0.5 F+/0.5 F+/0.25 D#+/0.25 F+/1.5 r/1`,
   },
 ];
 

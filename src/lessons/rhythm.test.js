@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRhythm, totalBeats, scoreRhythm, starsForAccuracy } from './rhythm.js';
+import { parseRhythm, totalBeats, slotsOf, scoreRhythm, starsForAccuracy } from './rhythm.js';
 
 describe('parseRhythm', () => {
   it('reads lengths, rests and bars', () => {
@@ -11,6 +11,58 @@ describe('parseRhythm', () => {
       ['E', 4, 0.5, false, 1],
     ]);
     expect(totalBeats(ev)).toBe(4.5);
+  });
+});
+
+describe('chords in a rhythm', () => {
+  const ev = parseRhythm('C,E,G+/2 r/1 F/1');
+
+  it('puts every chord note on the same beat and counts its length once', () => {
+    expect(ev.map(e => [e.name, e.oct, e.beat, e.beats])).toEqual([
+      ['C', 0, 0, 2], ['E', 0, 0, 2], ['G', 1, 0, 2], ['r', 0, 2, 1], ['F', 0, 3, 1],
+    ]);
+    expect(totalBeats(ev)).toBe(4);
+  });
+
+  it('gathers a chord into one slot', () => {
+    expect(slotsOf(ev).map(s => [s.beat, s.beats, s.rest, s.notes.length])).toEqual([
+      [0, 2, false, 3], [2, 1, true, 1], [3, 1, false, 1],
+    ]);
+  });
+
+  it('scores each chord note, and a dropped note counts as missed', () => {
+    const { results } = scoreRhythm(parseRhythm('C,E,G/2'), [
+      { time: 0.01, semitone: 0, octave: 4 },
+      { time: 0.02, semitone: 4, octave: 4 },
+    ], 0.5, 4);
+    expect(results.map(r => r.grade)).toEqual(['perfect', 'perfect', 'miss']);
+  });
+
+  it('rejects a bad note inside a chord', () => {
+    expect(() => parseRhythm('C,H,G')).toThrow();
+  });
+});
+
+describe('ties in a rhythm', () => {
+  it('makes one held note, across a bar line too', () => {
+    const ev = parseRhythm('C G/2~ | G/2 E');
+    expect(ev.map(e => [e.name, e.beat, e.beats])).toEqual([['C', 0, 1], ['G', 1, 4], ['E', 5, 1]]);
+    expect(totalBeats(ev)).toBe(6);
+  });
+
+  it('chains through several notes', () => {
+    expect(parseRhythm('G/2~ G~ G/0.5').map(e => e.beats)).toEqual([3.5]);
+  });
+
+  it('asks for one press, so a second press is an extra', () => {
+    const presses = [{ time: 0, semitone: 7, octave: 4 }, { time: 1, semitone: 7, octave: 4 }];
+    const { results, extras } = scoreRhythm(parseRhythm('G~ G'), presses, 0.5, 4);
+    expect(results.map(r => r.grade)).toEqual(['perfect']);
+    expect(extras).toBe(1);
+  });
+
+  it('refuses a tie between different notes', () => {
+    expect(() => parseRhythm('C~ D')).toThrow();
   });
 });
 

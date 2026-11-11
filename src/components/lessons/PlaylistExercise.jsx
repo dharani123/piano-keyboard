@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import StepExercise from './StepExercise.jsx';
+import RhythmExercise from './RhythmExercise.jsx';
 
 // Plays a list of lessons one after another, with a counted-down break between them.
 // The next lesson starts by itself; the keys stay free to play during the break.
@@ -45,12 +46,15 @@ export default function PlaylistExercise({ exercise, piano, onProgress, onComple
     );
   }
 
+  const timed = current.exercise.type === 'rhythm';
+  const Exercise = timed ? RhythmExercise : StepExercise;
   return (
     <div className="playlist">
       <div className="exercise-hint">{index + 1} of {lessons.length}: <b>{current.title}</b></div>
-      <StepExercise
+      <Exercise
         key={index}
         exercise={current.exercise}
+        {...(timed && { autoStart: true })}
         piano={piano}
         onProgress={text => onProgress(`${index + 1}/${lessons.length} ${text}`)}
         onComplete={finishLesson}

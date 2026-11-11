@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { engine } from '../../audio/engine.js';
 import { frequency } from '../../audio/pitch.js';
 import { codeAt, keyAt } from '../../data/keymap.js';
-import { parseRhythm, totalBeats, scoreRhythm, starsForAccuracy } from '../../lessons/rhythm.js';
+import { parseRhythm, totalBeats, slotsOf, scoreRhythm, starsForAccuracy } from '../../lessons/rhythm.js';
 import Staff from '../sheet/Staff.jsx';
 
 const COUNT_IN = 4;
@@ -14,7 +14,8 @@ function loadSpeed() {
   try { const v = Number(localStorage.getItem(SPEED_KEY)); return SPEEDS.includes(v) ? v : 1; } catch { return 1; }
 }
 
-export default function RhythmExercise({ exercise, piano, onProgress, onComplete }) {
+// autoStart = begin playing as soon as it opens, as the Relax lessons do
+export default function RhythmExercise({ exercise, piano, onProgress, onComplete, onStart, autoStart = false, registerStartStop }) {
   const events = useMemo(() => parseRhythm(exercise.pattern), [exercise.pattern]);
   const total = totalBeats(events);
   const [speed, setSpeedState] = useState(loadSpeed);
@@ -33,10 +34,11 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
   const pianoRef = useRef(piano);
   pianoRef.current = piano;
 
-  function light(code) {
-    if (lit.current === code) return;
-    lit.current = code;
-    pianoRef.current.setHighlight(code ? { targets: [code], wrong: null } : null);
+  function light(codes) {
+    const id = codes?.join() ?? null;
+    if (lit.current === id) return;
+    lit.current = id;
+    pianoRef.current.setHighlight(codes ? { targets: codes, wrong: null } : null);
   }
 
   function stop() {
@@ -47,6 +49,7 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
   }
   useEffect(() => stop, []);
   useEffect(() => { onProgress(`${bpm} BPM`); }, [bpm]);
+  useEffect(() => { if (autoStart) begin('play'); }, []);
 
   useEffect(() => piano.subscribe(e => {
     const r = run.current;
@@ -81,12 +84,20 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
       const target = r.mode === 'demo'
         ? events.find(e => !e.rest && b >= e.beat && b < e.beat + e.beats * 0.9)
         : events.find(e => !e.rest && b < e.beat + Math.min(e.beats, 1) * 0.5);
-      light(target ? codeAt(target.semitone, 0, pianoRef.current.layout) : null);
+      const codes = target && events.filter(e => !e.rest && e.beat === target.beat)
+        .map(e => codeAt(e.semitone, e.oct, pianoRef.current.layout));
+      light(codes ?? null);
       if (b > total + 0.6) return finish(r);
       frame.current = requestAnimationFrame(tick);
     };
     frame.current = requestAnimationFrame(tick);
   }
+
+  // Space: Start when ready, Stop while the demo or your turn is running
+  const halt = () => { stop(); setMode('ready'); setBeat(null); };
+  const spaceAction = useRef();
+  spaceAction.current = mode === 'ready' ? () => { onStart?.(); begin('play'); } : halt;
+  useEffect(() => registerStartStop?.(() => spaceAction.current()), []);
 
   function finish(r) {
     stop();
@@ -116,8 +127,8 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
       </div>
       <div className="exercise-actions">
         <button onClick={() => begin('demo')} disabled={mode !== 'ready'}>🔊 Listen first</button>
-        <button className="primary" onClick={() => begin('play')} disabled={mode !== 'ready'}>▶ Start</button>
-        {mode !== 'ready' && <button onClick={() => { stop(); setMode('ready'); setBeat(null); }}>Stop</button>}
+        <button className="primary" onClick={() => { onStart?.(); begin('play'); }} disabled={mode !== 'ready'}>▶ Start{registerStartStop && <> <kbd>Space</kbd></>}</button>
+        {mode !== 'ready' && <button onClick={halt}>Stop{registerStartStop && <> <kbd>Space</kbd></>}</button>}
         <span className="rhythm-speed">
           Speed
           {SPEEDS.map(v => (
@@ -132,13 +143,15 @@ export default function RhythmExercise({ exercise, piano, onProgress, onComplete
         {Array.from({ length: bars - 1 }, (_, i) => (
           <div key={i} className="barline" style={{ left: `${((i + 1) * BEATS_PER_BAR / total) * 100}%` }} />
         ))}
-        {events.map((e, i) => (
+        {slotsOf(events).map(({ beat: start, beats, rest, notes: [e, ...more] }) => (
           <div
-            key={i}
-            className={'lane-note' + (e.rest ? ' rest' : '')}
-            style={{ left: `${(e.beat / total) * 100}%`, width: `calc(${(e.beats / total) * 100}% - 3px)` }}
+            key={start}
+            className={'lane-note' + (rest ? ' rest' : '')}
+            style={{ left: `${(start / total) * 100}%`, width: `calc(${(beats / total) * 100}% - 3px)` }}
           >
-            {e.rest ? '𝄽' : <><b>{e.name.replace('#', '♯')}</b><small>{keyAt(e.semitone, 0, piano.layout)?.key}</small></>}
+            {rest ? '𝄽' : more.length
+              ? <b>{exercise.labels?.[start]}</b>
+              : <><b>{e.name.replace('#', '♯')}</b><small>{keyAt(e.semitone, 0, piano.layout)?.key}</small></>}
           </div>
         ))}
         {beat !== null && beat >= 0 && <div className="playhead" style={{ left: `${Math.min(beat / total, 1) * 100}%` }} />}

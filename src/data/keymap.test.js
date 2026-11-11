@@ -9,7 +9,7 @@ describe('normal layout', () => {
   it('lays C–B along S D F G H J K with no gap', () => {
     expect(['KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK'].map(c => byCode[c].note).join(' ')).toBe('C D E F G A B');
     expect(['KeyE', 'KeyR', 'KeyY', 'KeyU', 'KeyI'].map(c => byCode[c].note).join(' ')).toBe('C# D# F# G# A#');
-    expect(byCode.KeyA).toBeUndefined();
+    expect(byCode.KeyA).toMatchObject({ note: 'B', semitone: 11, octaveUp: -1 });
   });
 
   it("continues into the next octave on L ; ' Enter, sharps on P [", () => {
@@ -19,8 +19,8 @@ describe('normal layout', () => {
     expect(byCode.BracketRight).toBeUndefined();
   });
 
-  it('runs middle C to high F in half steps', () => {
-    expect([...playable(0)].sort((a, b) => a - b)).toEqual(Array.from({ length: 18 }, (_, i) => i));
+  it('runs the low B (on A) to high F in half steps', () => {
+    expect([...playable(0)].sort((a, b) => a - b)).toEqual(Array.from({ length: 19 }, (_, i) => i - 1));
   });
 });
 

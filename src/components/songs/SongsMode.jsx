@@ -7,7 +7,10 @@ import AmbientControl from './AmbientControl.jsx';
 import { loadAmbient, saveAmbient, startAmbient } from '../../songs/ambient.js';
 import { SongList, CarnaticInfo, CARNATIC_SPEEDS, speedLabel } from './CarnaticParts.jsx';
 import { SONG_LIBRARY } from '../../songs/library.js';
+import { SCALES } from '../../scales/curriculum.js';
 import { loadMySongs, saveMySongs } from '../../songs/mySongs.js';
+import { loadHiddenSongs, saveHiddenSongs, hideSong, visibleSongs } from '../../songs/hiddenSongs.js';
+import ConfirmDialog from '../ConfirmDialog.jsx';
 import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, GEETHAM_LEVEL, carnaticSongs, shownSongs, geethamSongs, loadCarnaticPick, saveCarnaticPick } from '../../songs/carnatic.js';
 import { loadBest, saveBest, isPassed } from '../../songs/best.js';
 import ImportAudio from './ImportAudio.jsx';
@@ -41,6 +44,8 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
   const [ambient, setAmbient] = useState(loadAmbient); // soft chords in the raga, shared with Relax
   const [best, setBest] = useState(loadBest);
   const [mySongs, setMySongs] = useState(loadMySongs);
+  const [hidden, setHidden] = useState(loadHiddenSongs); // decoded songs deleted from the tab
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [raga, setRaga] = useState(() => {
     try { return RAGAS[localStorage.getItem(RAGA_KEY)] ? localStorage.getItem(RAGA_KEY) : DEFAULT_RAGA; } catch { return DEFAULT_RAGA; }
   });
@@ -54,7 +59,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
   const pianoRef = useRef(piano);
   pianoRef.current = piano;
   const allSongs = kind === 'carnatic' ? carnatic
-    : kind === 'decoded' ? SONG_LIBRARY.filter(s => s.decoded) // their own tab
+    : kind === 'decoded' ? visibleSongs(SONG_LIBRARY.filter(s => s.decoded), hidden) // their own tab
       : [...SONG_LIBRARY.filter(s => !s.decoded), ...mySongs];
   // until you pick one, Carnatic opens on the varisai last picked in Relax (if it isn't locked)
   const lastPick = kind === 'carnatic' && songId === null ? carnatic.findIndex(s => s.id.split('@')[0] === loadCarnaticPick()) : -1;
@@ -103,6 +108,17 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
   function deleteMySong() {
     updateMySongs(mySongs.filter(s => s.id !== song.id));
     setSongId(SONG_LIBRARY[0].id);
+  }
+  function updateHidden(next) {
+    setHidden(next);
+    saveHiddenSongs(next);
+  }
+  function deleteDecodedSong() {
+    const next = allSongs[allSongs.indexOf(song) + 1] ?? allSongs[allSongs.indexOf(song) - 1];
+    updateHidden(hideSong(hidden, song.id));
+    setSongId(next.id);
+    setPhase('pick');
+    setConfirmDelete(false);
   }
 
   // demo: keys the app is playing itself (Listen & play), shown held down
@@ -249,6 +265,9 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
   const startStop = phase === 'playing'
     ? <button className="big" onClick={quit}>■ Stop</button>
     : <button className="primary big" onClick={begin}>▶ Start</button>;
+  const startStopNow = useRef();
+  startStopNow.current = phase === 'playing' ? quit : begin;
+  useEffect(() => piano.onStartStop(() => startStopNow.current()), []);
   // the same button again in the voice panel, so it is to hand at the top
   const spare = piano.playSlot && createPortal(
     <button className="voice-btn" onClick={phase === 'playing' ? quit : begin}>{phase === 'playing' ? 'Stop' : 'Start'}</button>,
@@ -348,7 +367,33 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
             <button className="link inline" disabled={phase === 'playing'} onClick={deleteMySong}>Delete this song</button>
           </p>
         )}
+        {song.scale && (
+          <p className="song-note">
+            Scale: <b>{song.scale}</b> ({SCALES.find(s => s.name === song.scale)?.names.slice(0, 7).join(' ')}). Practise it in the Scales tab.
+          </p>
+        )}
         {song.hint && <p className="song-note">{song.hint}</p>}
+        {song.decoded && (
+          <p className="song-note">
+            {allSongs.length > 1 && (
+              <button className="link inline" disabled={phase === 'playing'} onClick={() => setConfirmDelete(true)}>Delete this song</button>
+            )}
+            {allSongs.length > 1 && hidden.length > 0 && ' · '}
+            {hidden.length > 0 && (
+              <button className="link inline" disabled={phase === 'playing'} onClick={() => updateHidden([])}>
+                Restore {hidden.length} deleted {hidden.length === 1 ? 'song' : 'songs'}
+              </button>
+            )}
+          </p>
+        )}
+        {confirmDelete && (
+          <ConfirmDialog
+            title="Delete this song?"
+            message={`“${song.title}” will be removed from Decoded songs. You can bring it back with “Restore deleted songs”.`}
+            onConfirm={deleteDecodedSong}
+            onCancel={() => setConfirmDelete(false)}
+          />
+        )}
         {song.chords && (
           <p className="song-note">
             Chord track: hold each chord with three fingers for its full length (C → F, then Am → Em → G).

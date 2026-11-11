@@ -6,6 +6,7 @@ import RhythmExercise from './RhythmExercise.jsx';
 import EarExercise from './EarExercise.jsx';
 import ChoiceExercise from './ChoiceExercise.jsx';
 import PlaylistExercise from './PlaylistExercise.jsx';
+import { playingViewDelta } from '../../lessons/playingView.js';
 import { PASS_STARS } from '../../lessons/progress.js';
 
 const MESSAGES = [
@@ -24,11 +25,42 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
 
   useEffect(() => { if (phase !== 'exercise') piano.setStatus(title); }, [phase]);
 
+  // A lesson can need a keyboard layout (the Scales tab slides the keys so each scale fits)
+  useEffect(() => {
+    if (lesson.layout == null) return;
+    piano.setLayout(lesson.layout);
+    return () => piano.setLayout(null);
+  }, [lesson.layout]);
+
   // Exercises render under the piano so the glowing keys and the prompt are
   // on screen together; bring that area into view when one starts.
   function show(next, scrollTo) {
     setPhase(next);
     requestAnimationFrame(() => scrollTo?.scrollIntoView({ block: next === 'theory' ? 'start' : 'end', behavior: 'smooth' }));
+  }
+
+  // Sheet Reading exercises need the keys and the staff in view together
+  const isSheet = lesson.id.startsWith('sr-');
+  function scrollToPlayingView() {
+    const keys = piano.slot?.parentElement.querySelector('.piano');
+    if (!keys) return;
+    const delta = playingViewDelta({
+      keysTop: keys.getBoundingClientRect().top,
+      panelBottom: piano.slot.getBoundingClientRect().bottom,
+      windowHeight: window.innerHeight,
+    });
+    window.scrollBy({ top: delta, behavior: 'smooth' });
+  }
+  function goToExercise() {
+    // next frame, so a just-opened exercise has its full height
+    requestAnimationFrame(() => {
+      if (isSheet) scrollToPlayingView();
+      else piano.slot?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    });
+  }
+  function startExercise() {
+    setPhase('exercise');
+    goToExercise();
   }
 
   function complete(r) {
@@ -41,6 +73,31 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
     setAttempt(a => a + 1);
     setPhase('exercise');
   }
+
+  // N = Next lesson, live only while its button shows (N plays no note)
+  const canNext = phase === 'result' && Math.max(result?.stars ?? 0, bestStars) >= PASS_STARS && hasNext;
+  const next = () => { onNext(); pageRef.current?.scrollIntoView({ behavior: 'smooth' }); };
+  const shortcuts = useRef({});
+  shortcuts.current = { KeyN: canNext ? next : null };
+  useEffect(() => {
+    const onKey = e => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea')) return;
+      shortcuts.current[e.code]?.();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Space (or a left Shift tap) = Start exercise / Stop / Try again. During an exercise, one
+  // with its own start (rhythm) can take it over through registerStartStop; otherwise
+  // it stops the exercise and goes back to the lesson notes.
+  const exerciseStartStop = useRef(null);
+  const registerStartStop = fn => { exerciseStartStop.current = fn; return () => { if (exerciseStartStop.current === fn) exerciseStartStop.current = null; }; };
+  const startStop = useRef();
+  startStop.current = phase === 'theory' ? startExercise
+    : phase === 'result' ? retry
+    : () => (exerciseStartStop.current ? exerciseStartStop.current() : show('theory', pageRef.current));
+  useEffect(() => piano.onStartStop(() => startStop.current()), []);
 
   const Exercise = { rhythm: RhythmExercise, ear: EarExercise, choice: ChoiceExercise, playlist: PlaylistExercise }[lesson.exercise.type] ?? StepExercise;
   const backToNotes = () => show('theory', pageRef.current);
@@ -56,6 +113,8 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
           key={attempt}
           exercise={lesson.exercise}
           piano={piano}
+          registerStartStop={registerStartStop}
+          {...(isSheet && { onStart: goToExercise })}
           onProgress={text => piano.setStatus(`${title} ${text}`)}
           onComplete={complete}
         />
@@ -68,9 +127,9 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
           <p className="result-msg">{MESSAGES[result.stars]}</p>
           <p className="result-detail">{result.detail}</p>
           <div className="result-actions">
-            <button onClick={retry}>↻ Try again</button>
+            <button onClick={retry}>↻ Try again <kbd>Space</kbd></button>
             <button onClick={backToNotes}>Review notes</button>
-            {Math.max(result.stars, bestStars) >= PASS_STARS && hasNext && <button className="primary" onClick={() => { onNext(); pageRef.current?.scrollIntoView({ behavior: 'smooth' }); }}>Next lesson →</button>}
+            {canNext && <button className="primary" onClick={next}>Next lesson → <kbd>N</kbd></button>}
           </div>
         </div>
       )}
@@ -87,8 +146,8 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
       </div>
       <Theory blocks={lesson.theory} />
       {phase === 'theory'
-        ? <button className="primary big" onClick={() => show('exercise', piano.slot)}>Start exercise ↑</button>
-        : <button className="big" onClick={() => piano.slot?.scrollIntoView({ block: 'end', behavior: 'smooth' })}>Exercise in progress at the piano ↑</button>}
+        ? <button className="primary big" onClick={startExercise}>Start exercise ↑ <kbd>Space</kbd></button>
+        : <button className="big" onClick={goToExercise}>Exercise in progress at the piano ↑</button>}
       {active}
     </div>
   );

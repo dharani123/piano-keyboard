@@ -134,6 +134,18 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
     return () => clearTimeout(t);
   }, [state.phase]);
 
+  // B = Hear again (Play again during the intro); B plays no note on the piano
+  const hearAgain = useRef();
+  hearAgain.current = !introDone ? playIntro : state.phase !== 'done' ? () => playRound(round, round.reference) : null;
+  useEffect(() => {
+    const onKey = e => {
+      if (e.code !== 'KeyB' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea')) return;
+      hearAgain.current?.();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   if (!introDone) {
     return (
       <div className="exercise">
@@ -144,7 +156,7 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
         </div>
         <div className="exercise-hint">Each new note is played next to C, three times. Play along on the glowing keys, and hum them.</div>
         <div className="exercise-actions">
-          <button onClick={playIntro}>🔊 Play again</button>
+          <button onClick={playIntro}>🔊 Play again <kbd>B</kbd></button>
           <button className="primary" onClick={() => { engine.cancelScheduled(); setIntroDone(true); }}>Start ▶</button>
         </div>
       </div>
@@ -172,7 +184,7 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
         <div className="progress"><div key={state.index} className="ear-timer" style={{ animationDuration: `${exercise.timeLimit}ms` }} /></div>
       )}
       <div className="exercise-actions">
-        {state.phase !== 'done' && <button onClick={() => playRound(round, round.reference)}>🔊 Hear again</button>}
+        {state.phase !== 'done' && <button onClick={() => playRound(round, round.reference)}>🔊 Hear again <kbd>B</kbd></button>}
         {state.phase !== 'done' && exercise.reference !== 'every' && <button onClick={hearC}>🔊 Hear C</button>}
         <span className="counter">{Math.min(state.index + 1, total)} / {total} · mistakes {state.mistakes}</span>
       </div>

@@ -30,7 +30,6 @@ function buildLayout(shift) {
   const keys = [];
   let whites = 0;
   HOME.forEach(([code, key], i) => {
-    if (shift === 0 && i === 0) return; // A stays silent in the normal layout
     const w = i - 1 - shift; // white keys from middle C
     const octaveUp = Math.floor(w / 7);
     const semitone = WHITE_STEPS[w - octaveUp * 7];
@@ -63,7 +62,9 @@ export const noteCodeFor = code => (NOTE_CODES.has(code) ? code : null);
 
 // The normal layout, as lessons and ear training use it
 export const byCode = BY_CODE[0];
-export const KEYS = LAYOUTS[0].filter(k => k.octaveUp === 0);
+// (middle octave only: `after` is recounted so it ignores the low B on A)
+const LOW_WHITES = LAYOUTS[0].filter(k => k.type === 'white' && k.octaveUp < 0).length;
+export const KEYS = LAYOUTS[0].filter(k => k.octaveUp === 0).map(k => (k.type === 'black' ? { ...k, after: k.after - LOW_WHITES } : k));
 export const HIGH_KEYS = LAYOUTS[0].filter(k => k.octaveUp === 1);
 export const HIGH_C = HIGH_KEYS[0];
 // semitone → its key in the higher octave (C to F only)

@@ -95,15 +95,15 @@ const FROM_BEATS = [[4, 'w', false], [3, 'h', true], [2, 'h', false], [1.5, 'q',
   [0.75, 'e', true], [0.5, 'e', false], [0.25, 's', false]];
 
 // A rhythm-exercise pattern ("C D E/2 | r G/0.5 G/0.5 …", C = middle C, + and -
-// for octaves) as staff items. Eighths that share a beat are beamed.
+// for octaves, ~ ties a note to the next) as staff items. Eighths that share a beat are beamed.
 export function patternToItems(pattern, keySig = 0) {
   const items = [];
   let beat = 0;
   for (const token of pattern.split(/\s+/).filter(Boolean)) {
     if (token === '|') { items.push({ bar: '|' }); continue; }
-    const m = token.match(/^([A-G]#?|r)([+-]*)(?:\/([\d.]+))?$/);
+    const m = token.match(/^([A-G]#?|r)([+-]*)(?:\/([\d.]+))?(~)?$/);
     if (!m) throw new Error(`Bad rhythm token "${token}"`);
-    const [, name, shifts, len] = m;
+    const [, name, shifts, len, tie] = m;
     const beats = len ? Number(len) : 1;
     const shape = FROM_BEATS.find(([b]) => Math.abs(b - beats) < 1e-6);
     if (!shape) throw new Error(`No note shape for ${beats} beats`);
@@ -116,7 +116,7 @@ export function patternToItems(pattern, keySig = 0) {
       const sharp = name.length > 1;
       // only write the sharp when the key signature doesn't already give it
       const acc = sharp && keySigAcc(letter, keySig) !== '#' ? '#' : !sharp && keySigAcc(letter, keySig) ? 'n' : '';
-      items.push({ n: letter + acc + octave, d, dot, beat });
+      items.push({ n: letter + acc + octave, d, dot, beat, ...(tie && { tie: true }) });
     }
     beat += beats;
   }

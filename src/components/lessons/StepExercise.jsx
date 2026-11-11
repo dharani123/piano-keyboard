@@ -44,11 +44,12 @@ export default function StepExercise({ exercise, piano, onProgress, onComplete }
   }, [state.index, state.status]);
 
   // Ear training: play the prompt when a step that has one comes up
-  function audition(ns, chord) {
+  // gap = seconds from one note's start to the next (a step's `gap`, else 0.55)
+  function audition(ns, chord, gap = 0.55) {
     const start = engine.now() + 0.05;
     ns.forEach((n, i) => {
       const freq = frequency(state.baseOctave + n.oct, n.semitone, piano.transpose);
-      engine.playNote(freq, piano.instrumentId, chord ? start : start + i * 0.55, chord ? 1.4 : 0.5);
+      engine.playNote(freq, piano.instrumentId, chord ? start : start + i * gap, chord ? 1.4 : Math.min(0.8, gap * 0.9));
     });
   }
   // D major: fill in the key the keyboard couldn't catch
@@ -72,12 +73,23 @@ export default function StepExercise({ exercise, piano, onProgress, onComplete }
   useEffect(() => {
     if (!step?.play) return;
     // short pause so the prompt doesn't collide with the note just played
-    const t = setTimeout(() => audition(step.play, false), state.index === 0 ? 150 : 600);
+    const t = setTimeout(() => audition(step.play, step.together, step.gap), state.index === 0 ? 150 : 600);
     return () => clearTimeout(t);
   }, [state.index]);
 
-  // Most recent prompt at or before the current step, for "Hear again"
-  const replay = step && state.steps.slice(0, state.index + 1).findLast(s => s.play)?.play;
+  // Most recent prompt at or before the current step, for "Hear again" (also on B)
+  const replayStep = step && state.steps.slice(0, state.index + 1).findLast(s => s.play);
+  const replay = replayStep?.play;
+  const hearAgain = useRef();
+  hearAgain.current = replay ? () => audition(replay, replayStep.together, replayStep.gap) : null;
+  useEffect(() => {
+    const onKey = e => {
+      if (e.code !== 'KeyB' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea')) return;
+      hearAgain.current?.();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     if (state.status !== 'done') return;
@@ -105,12 +117,12 @@ export default function StepExercise({ exercise, piano, onProgress, onComplete }
       <div className="exercise-hint">
         {shift > 0 && <>First go <b>octave up</b>: press <kbd>X</kbd></>}
         {shift < 0 && <>First go <b>octave down</b>: press <kbd>Z</kbd></>}
-        {shift === 0 && step && exercise.hint === 'none' && (showGlow ? 'Here it is, the key is glowing.' : 'No glow this time. Two misses and you get a hint.')}
+        {shift === 0 && step && exercise.hint === 'none' && (showGlow ? `Here ${step.notes.length > 1 ? 'they are, the keys are' : 'it is, the key is'} glowing.` : 'No glow this time. Two misses and you get a hint.')}
         {shift === 0 && step && exercise.hint === 'glow' && (step.notes.length > 1 ? (isDMajor(step.notes) ? 'Any two glowing keys play the whole chord.' : 'Hold all the glowing keys together.') : '')}
       </div>
       <div className="exercise-actions">
         {step && exercise.demo && <button onClick={playDemo}>🔊 Hear the whole loop</button>}
-        {replay && <button onClick={() => audition(replay, false)}>🔊 Hear again</button>}
+        {replay && <button onClick={hearAgain.current}>🔊 Hear again <kbd>B</kbd></button>}
         {step?.listen && <button onClick={() => audition(step.listen, step.chord)}>🔊 Hear it</button>}
         <span className="counter">{Math.min(state.index + 1, total)} / {total} · mistakes {state.mistakes}</span>
       </div>

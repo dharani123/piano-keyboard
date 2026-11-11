@@ -168,8 +168,11 @@ export const INSTRUMENTS = [
     id: 'veena',
     name: 'Veena',
     veena: {
-      seconds: 8, ring: 9, position: 0.1, softness: 0.35, spread: 1.2,
-      brightness: 0.5, buzz: 0.7, nail: 0.25,
+      // tuned against the Tere Bina recording: plucked further from the
+      // bridge with a softer nail, so the fundamental leads and the jawari
+      // buzz gives an even halo above it that keeps ringing
+      seconds: 8, ring: 9, position: 0.22, softness: 0.5, spread: 1.2,
+      brightness: 0.6, buzz: 0.9, nail: 0.05,
       sympathetic: [130.81, 196, 261.63], coupling: 0.002,
       body: [
         { freq: 105, q: 6, gain: 3 },
@@ -181,9 +184,11 @@ export const INSTRUMENTS = [
       ],
       bodyMix: 0.5,
     },
-    env: { attack: 0.002, release: 1.5 },
+    env: { attack: 0.008, release: 1.5 },
     filter: { from: 14, to: 6, time: 3, q: 0.5 },
     settle: { cents: 8, time: 0.08 },
+    // meend: a note played soon after another, close by, slides in from it
+    glide: 0.07, glideRange: 5, glideWithin: 0.8,
     space: 0.15,
   },
   {

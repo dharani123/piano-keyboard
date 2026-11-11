@@ -33,7 +33,6 @@ export default function App() {
   const [transposeLocks, setTransposeLocks] = useState(0);
   const transpose = TRANSPOSE_ENABLED ? effectiveTranspose(storedTranspose, transposeLocks) : 0;
   const [effects, setEffects] = useState({ volume: 0.7, reverb: 0.25, chorus: 0 });
-  const [spaceHeld, setSpaceHeld] = useState(false);
   const [pedalLatched, setPedalLatched] = useState(false);
   const [pressed, setPressed] = useState(() => new Set());
   const [lastNote, setLastNote] = useState(null);
@@ -42,6 +41,7 @@ export default function App() {
   const [lessonSlot, setLessonSlot] = useState(null); // element under the piano where exercises render
   const [fallSlot, setFallSlot] = useState(null); // element above the piano where song notes fall
   const [playSlot, setPlaySlot] = useState(null); // spot in the voice panel for a spare Start/Stop button
+  const startStopRef = useRef(null);
   // Keyboard layout shift (see keymap.js): the player's own Shift −/+ choice, unless a song tab
   // has set the layout it needs (songLayout, null when no song tab is open)
   const [userShift, setUserShift] = useState(() => {
@@ -66,7 +66,7 @@ export default function App() {
     return () => listeners.current.delete(fn);
   }, []);
 
-  const sustainOn = spaceHeld || pedalLatched;
+  const sustainOn = pedalLatched; // the on-screen pedal button; Space no longer sustains
 
   useEffect(() => { engine.setSustain(sustainOn); }, [sustainOn]);
   // A key held across a layout change would never get its key-up note
@@ -128,7 +128,6 @@ export default function App() {
     chordFillOn.current = false;
     heldRef.current.clear();
     setPressed(new Set());
-    setSpaceHeld(false);
     engine.allOff();
   }
 
@@ -143,14 +142,21 @@ export default function App() {
     return () => setTransposeLocks(n => n - 1);
   }, []);
 
+  // The open song's Start/Stop, for the left Shift key. Returns the release function, so it can
+  // be an effect's cleanup.
+  const onStartStop = useCallback(fn => {
+    startStopRef.current = fn;
+    return () => { startStopRef.current = null; };
+  }, []);
+
   useKeyboard({
     noteDown,
     noteUp,
     releaseAll,
-    sustain: setSpaceHeld,
     octave: shiftOctave,
     transpose: shiftTranspose,
     voice: setVoiceIndex,
+    startStop: () => startStopRef.current?.(),
   });
 
   const piano = {
@@ -164,6 +170,7 @@ export default function App() {
     slot: lessonSlot,
     fallSlot,
     playSlot,
+    onStartStop,
     setLayout: setSongLayout,
     layout,
     // keys held right now, as { semitone, octave }

@@ -376,7 +376,117 @@ const unit2 = {
   ],
 };
 
-// ── Unit 3: sharps, flats & naturals ─────────────────────────────────────────
+// ── Unit 3: rhythm practise ──────────────────────────────────────────────────
+// Everything from unit 2 played in time, on white keys only, from easy to advanced.
+
+const practise = (id, title, explain, tip, pattern, options) => ({
+  id: `sr-rp-${id}`,
+  title,
+  theory: [explain, { tip }],
+  exercise: rhythm(pattern, options),
+});
+
+const rhythmPractise = {
+  title: 'Rhythm practise',
+  // Practice, not a gate: every lesson stays open, so one hard rhythm never blocks the rest
+  openStart: true,
+  allOpen: true,
+  lessons: [
+    practise('quarters', 'Easy: steady quarter notes',
+      'One note on every click. Four quarter notes fill each bar, and only the key changes.',
+      'Count "1 2 3 4" out loud, and press on every number.',
+      'C C C C | D D D D | E E E E | C C C C', { bpm: 72 }),
+    practise('halves', 'Easy: half notes',
+      'Half notes last two beats, so you play on beats 1 and 3 and hold through 2 and 4.',
+      'Keep the key down until the next note is due.',
+      'C/2 C/2 | D/2 D/2 | E/2 G/2 | C/2 C/2', { bpm: 72 }),
+    practise('wholes', 'Easy: whole notes',
+      'One note per bar, held for all four beats. The hard part is waiting, because the next press only comes on the next beat 1.',
+      'Say "1 2 3 4" while you hold, and move only on the next "1".',
+      'C/4 | E/4 | G/4 | C/4', { bpm: 76 }),
+    practise('quarters-halves', 'Easy: quarters and halves',
+      'Now the lengths start to mix. Read each note\'s shape before you reach it: filled means one beat, hollow with a stem means two.',
+      'Press **Listen first**, and clap along once before you play.',
+      'C D E/2 | E F G/2 | G F E D | C/2 C/2', { bpm: 76 }),
+    practise('all-three', 'Easy: all three together',
+      'Whole, half and quarter notes in one line. Every bar still adds up to four beats.',
+      'The last bar is a whole note, so stay on it for all four clicks.',
+      'C/2 D E | F/2 G/2 | A G F D | C/4', { bpm: 76 }),
+
+    practise('quarter-rests', 'Medium: quarter rests',
+      'A rest is a silent beat, and it is just as exact as a note. Every other beat here is empty.',
+      'Keep counting through the rests: "1 2 3 4", playing only on 1 and 3.',
+      'C r C r | D r D r | E r G r | C r r r', { bpm: 72 }),
+    practise('rest-first', 'Medium: starting after a rest',
+      'Each bar begins with silence, so you come in on beat 2. Beginners tend to rush this, so let beat 1 go by.',
+      'Say "rest" on beat 1, then play "2 3 4".',
+      'r C C C | r D D D | r E r G | r C/2 r', { bpm: 72 }),
+    practise('long-rests', 'Medium: long rests',
+      'Half rests sit on the middle line and last two beats. The whole rest hangs from the line above and silences a whole bar.',
+      'A whole bar of silence is four full clicks, so count every one before you come back in.',
+      'C D E F | G/2 r/2 | r/4 | E D C r', { bpm: 76 }),
+    practise('waltz', 'Medium: three beats in a bar',
+      'In 3/4 every bar has three beats, and the loud click comes every three. It feels like a slow waltz.',
+      'Count "1 2 3", and lean a little on each 1.',
+      'C E G | F/2 D | E G r | C/3', { bpm: 84, time: [3, 4] }),
+    practise('first-eighths', 'Medium: first eighth notes',
+      'Two eighth notes share one beat, and the beam joins them. Say "1 and 2 and": the first eighth lands on the number, and the second on the "and".',
+      'Try 50% speed first. The same key repeats, so all your attention can go on the timing.',
+      'C C C/0.5 C/0.5 C | D D D/0.5 D/0.5 D | E/0.5 E/0.5 E E/0.5 E/0.5 E | C/0.5 C/0.5 C/0.5 C/0.5 C/2', { bpm: 66 }),
+    practise('walking-eighths', 'Medium: eighths that walk',
+      'Four eighth notes step along the white keys, then a half note gives you time to breathe and find the next group.',
+      'Look ahead during each half note.',
+      'C/0.5 D/0.5 E/0.5 F/0.5 G/2 | G/0.5 F/0.5 E/0.5 D/0.5 C/2 | E/0.5 F/0.5 G/0.5 A/0.5 B/2 | A/0.5 G/0.5 F/0.5 E/0.5 C/2', { bpm: 66 }),
+    practise('eighth-rests', 'Medium: eighth rests',
+      'An eighth rest takes half a beat of silence, so the next note lands on the "and". This is your first taste of playing between the clicks.',
+      'Say "1 and 2 and" out loud, and stay silent on the rest.',
+      'C r/0.5 D/0.5 E r/0.5 F/0.5 | G r/0.5 F/0.5 E r/0.5 D/0.5 | C/2 r/0.5 D/0.5 E | C/2 r/2', { bpm: 66 }),
+
+    practise('dotted-half', 'Hard: dotted half notes',
+      'A dot adds half the note\'s length, so a dotted half lasts 2 + 1 = 3 beats. Here it leaves just one beat for the next note.',
+      'Count "1 2 3" while you hold, and move on 4.',
+      'C/3 D | E/3 F | G/3 E | C/4', { bpm: 72 }),
+    practise('long-short', 'Hard: long, short',
+      'A dotted quarter lasts one and a half beats, and the eighth note after it fills the rest of the second beat. Together they make a "long, short" lilt.',
+      'Say "1, 2 and": the short note lands on the "and" of 2.',
+      'C/1.5 D/0.5 E/2 | E/1.5 F/0.5 G/2 | G/1.5 F/0.5 E/1.5 D/0.5 | C/4', { bpm: 66 }),
+    practise('dotted-waltz', 'Hard: long, short in 3/4',
+      'The same lilt in a waltz. Each bar goes long, short, then one plain beat.',
+      'Feel each bar as "long, short, step".',
+      'C/1.5 D/0.5 E | G/1.5 F/0.5 E | D/1.5 E/0.5 F | C/3', { bpm: 76, time: [3, 4] }),
+    practise('ties', 'Hard: ties across the bar',
+      'A tie joins two notes of the same pitch: press once and hold for both. Ties let a note carry on past the bar line, so beat 1 of the next bar goes by with no press.',
+      'If you press again on a tied note, it counts as an extra note.',
+      'C D E F~ | F E D/2 | E F G/2~ | G/2 C/2', { bpm: 72 }),
+    practise('more-ties', 'Hard: a tie in every bar',
+      'Now each bar leads into the next one with a held note. The bar lines still pass by, but your finger doesn\'t move.',
+      'Trust the count, not the bar line: you only press where a new note starts.',
+      'C/2 E/2~ | E/2 G/2~ | G F E D~ | D/2 C/2', { bpm: 72 }),
+
+    practise('offbeat', 'Advanced: the off-beat quarter',
+      'Eighth, quarter, eighth: the quarter note starts on an "and" and carries over the next beat. This is called **syncopation**, and the rhythm seems to push against the click.',
+      'Say "1 and 2 and": press on 1, on the first "and", and on the second "and". Use 50% speed at first.',
+      'C/0.5 E E/0.5 G/2 | G/0.5 E E/0.5 C/2 | D/0.5 F F/0.5 A/2 | G/0.5 E D/0.5 C/2', { bpm: 64 }),
+    practise('short-long', 'Advanced: short, long',
+      'The lilt turned around: a quick eighth note on the beat, then a dotted quarter on the "and". It takes real control to keep the short note short.',
+      'Press the two notes close together, then wait.',
+      'C/0.5 D/1.5 E/0.5 F/1.5 | G/0.5 A/1.5 G/2 | F/0.5 E/1.5 D/0.5 E/1.5 | C/4', { bpm: 60 }),
+    practise('tied-offbeat', 'Advanced: ties across the beat',
+      'A tied note can cross a beat as well as a bar. The second eighth holds over beat 2, so the click sounds while your finger stays still.',
+      'Count "1 and 2 and": press on 1, on the first "and", and on the second "and". Stay still on 2.',
+      'C/0.5 D/0.5~ D/0.5 E/0.5 F/2 | F/0.5 E/0.5~ E/0.5 D/0.5 C/2 | E/0.5 G/0.5~ G/0.5 E/0.5 G/2 | G/0.5 E/0.5~ E/0.5 D/0.5 C/2', { bpm: 60 }),
+    practise('six-four', 'Advanced: six beats in a bar',
+      'In 6/4 each bar has six beats, the same time signature as your Namo Namo sheet. Long notes and dotted notes both get more room here.',
+      'Count all the way to 6, and don\'t let the bar feel like a 4 with extra beats.',
+      'C/2 E/2 G/2 | A/3 G/3 | F/1.5 E/0.5 D C/3 | E/3 C/3', { bpm: 72, time: [6, 4] }),
+    practise('everything', 'Advanced: everything together',
+      'Dots, rests, eighth notes and ties all in one line. If you can play this one, you can count anything in this unit.',
+      'Read it slowly away from the keys first, saying "1 and 2 and". Then play at 50%, 75% and 100%.',
+      'C/1.5 D/0.5 E r/0.5 F/0.5 | G/2~ G/0.5 F/0.5 E | r D/0.5 E/0.5 F/2~ | F/0.5 E/0.5 D/0.5 E/0.5 C/2', { bpm: 60 }),
+  ],
+};
+
+// ── Unit 4: sharps, flats & naturals ─────────────────────────────────────────
 
 const keySigQuestions = () => shuffle([
   [1, 'G major', 'F♯'], [2, 'D major', 'F♯ C♯'], [3, 'A major', 'F♯ C♯ G♯'], [4, 'E major', 'F♯ C♯ G♯ D♯'],
@@ -400,6 +510,7 @@ const keySigQuestions = () => shuffle([
 
 const unit3 = {
   title: 'Sharps, flats & naturals',
+  openStart: true, // the open Rhythm practise unit comes before it, and shouldn't be a gate
   lessons: [
     {
       id: 'sr-accidentals',
@@ -477,7 +588,7 @@ const unit3 = {
   ],
 };
 
-// ── Unit 4: reading real music ───────────────────────────────────────────────
+// ── Unit 5: reading real music ───────────────────────────────────────────────
 
 // Namo Namo, bars 5–6 of the user's first Songscription sheet, as written
 const NAMO_BARS = [
@@ -532,7 +643,7 @@ const unit4 = {
   ],
 };
 
-// ── Unit 5: bass clef & grand staff ──────────────────────────────────────────
+// ── Unit 6: bass clef & grand staff ──────────────────────────────────────────
 
 const BASS_RANGE = ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3'];
 
@@ -598,7 +709,7 @@ const unit5 = {
   ],
 };
 
-// ── Unit 6: symbols & expression ─────────────────────────────────────────────
+// ── Unit 7: symbols & expression ─────────────────────────────────────────────
 
 const dynamicsQuestions = () => shuffle([
   ['pp', 'very soft'], ['p', 'soft'], ['mp', 'medium soft'], ['mf', 'medium loud'], ['f', 'loud'], ['ff', 'very loud'],
@@ -737,7 +848,7 @@ const unit6 = {
   ],
 };
 
-export const SHEET_UNITS = [unit1, unit2, unit3, unit4, unit5, unit6];
+export const SHEET_UNITS = [unit1, unit2, rhythmPractise, unit3, unit4, unit5, unit6];
 
 export const SHEET_LESSONS = SHEET_UNITS.flatMap((unit, u) =>
   unit.lessons.map((lesson, l) => ({ ...lesson, num: `${u + 1}.${l + 1}`, unit: u }))

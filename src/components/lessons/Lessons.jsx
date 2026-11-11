@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { UNITS, LESSONS } from '../../lessons/curriculum.js';
-import { loadProgress, saveProgress, hasPassed } from '../../lessons/progress.js';
+import { loadProgress, saveProgress } from '../../lessons/progress.js';
 import Course from './Course.jsx';
 import { SHEET_UNITS, SHEET_LESSONS } from '../../sheet/curriculum.js';
-import EarGym from '../ear/EarGym.jsx';
+import { SCALE_UNITS, SCALE_LESSONS } from '../../scales/curriculum.js';
+import { IDENTIFY_UNITS, IDENTIFY_LESSONS } from '../../identify/curriculum.js';
 import SongsMode from '../songs/SongsMode.jsx';
 import RelaxMode from '../songs/RelaxMode.jsx';
 
 const CARNATIC_MODE_KEY = 'desk-piano-carnatic-mode';
 const TAB_KEY = 'desk-piano-tab';
-const TABS = ['carnatic', 'lessons', 'gym', 'western', 'decoded', 'sheet'];
+const TABS = ['carnatic', 'lessons', 'scales', 'identify', 'western', 'decoded', 'sheet'];
 
 export default function Lessons({ piano }) {
   const [progress, setProgress] = useState(loadProgress);
@@ -30,7 +31,6 @@ export default function Lessons({ piano }) {
     setCarnaticMode(mode);
     try { localStorage.setItem(CARNATIC_MODE_KEY, mode); } catch { /* storage blocked */ }
   }
-  const gymOpen = progress.unlockAll || hasPassed(progress, 'ear-quick');
 
   function update(next) {
     setProgress(next);
@@ -54,21 +54,18 @@ export default function Lessons({ piano }) {
       <div className="learn-tabs">
         <button className={tab === 'carnatic' ? 'active' : ''} onClick={() => setTab('carnatic')}>Carnatic 🪕</button>
         <button className={tab === 'lessons' ? 'active' : ''} onClick={() => setTab('lessons')}>Lessons 📚</button>
-        <button
-          className={tab === 'gym' ? 'active' : ''}
-          disabled={!gymOpen}
-          title={gymOpen ? 'Daily ear practice' : 'Pass Ear training to open'}
-          onClick={() => setTab('gym')}
-        >
-          Ear Gym {gymOpen ? '🎧' : '🔒'}
-        </button>
+        <button className={tab === 'scales' ? 'active' : ''} onClick={() => setTab('scales')}>Scales 🎹</button>
+        <button className={tab === 'identify' ? 'active' : ''} onClick={() => setTab('identify')}>Identify Notes 👂</button>
         <button className={tab === 'western' ? 'active' : ''} onClick={() => setTab('western')}>Western Music 🎵</button>
         <button className={tab === 'decoded' ? 'active' : ''} onClick={() => setTab('decoded')}>Decoded Songs 🎼</button>
         <button className={tab === 'sheet' ? 'active' : ''} onClick={() => setTab('sheet')}>Sheet Reading 📜</button>
-        {!gymOpen && <span className="learn-tabs-note">Pass Ear training to open</span>}
       </div>
-      {tab === 'carnatic' && carnaticMode === 'relax' ? <RelaxMode piano={piano} modeSwitch={modeSwitch} /> : tab === 'western' || tab === 'decoded' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} modeSwitch={tab === 'carnatic' ? modeSwitch : null} /> : tab === 'gym' && gymOpen ? <EarGym piano={piano} /> : (
-      tab === 'sheet'
+      {tab === 'carnatic' && carnaticMode === 'relax' ? <RelaxMode piano={piano} modeSwitch={modeSwitch} /> : tab === 'western' || tab === 'decoded' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} modeSwitch={tab === 'carnatic' ? modeSwitch : null} /> : (
+      tab === 'identify'
+        ? <Course key="identify" storageKey="desk-piano-open-identify-lesson" title="Identify notes" units={IDENTIFY_UNITS} lessons={IDENTIFY_LESSONS} progress={progress} update={update} piano={piano} />
+        : tab === 'scales'
+        ? <Course key="scales" storageKey="desk-piano-open-scales-lesson" title="Scales" units={SCALE_UNITS} lessons={SCALE_LESSONS} progress={progress} update={update} piano={piano} />
+        : tab === 'sheet'
         ? <Course key="sheet" storageKey="desk-piano-open-sheet-lesson" title="Sheet reading" units={SHEET_UNITS} lessons={SHEET_LESSONS} progress={progress} update={update} piano={piano} />
         : <Course key="lessons" storageKey="desk-piano-open-lesson" units={UNITS} lessons={LESSONS} progress={progress} update={update} piano={piano} />
       )}
