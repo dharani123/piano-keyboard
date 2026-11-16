@@ -22,6 +22,12 @@ export function twoNoteRounds(pool, count, random = Math.random) {
 }
 
 const pretty = name => name.replace('#', '♯');
+// Carnatic names for every key (Sa = C), shown under
+// each option's picture and in the reveal (the user, 2026-11-14: white keys first, then all 12;
+// black keys: the lower Ri Ga Da Ni are written small (ri ga da ni), F♯ is Ma♯ (since 2026-11-14)
+const SWARA_OF = { C: 'Sa', 'C#': 'ri', D: 'Ri', 'D#': 'ga', E: 'Ga', F: 'Ma', 'F#': 'Ma♯', G: 'Pa', 'G#': 'da', A: 'Da', 'A#': 'ni', B: 'Ni' };
+const swaraReveal = names => `**${names.map(pretty).join(' → ')}** (${names.map(x => SWARA_OF[x]).join(' ')})`;
+const swaraLabels = options => Object.fromEntries(options.map(o => [o, o.split(' ').map(x => SWARA_OF[x])]));
 // seconds from the first note's start to the second's: a clear pause between them
 const GAP = 1;
 
@@ -35,56 +41,88 @@ function roundSteps([a, b], round) {
 
 // Greater / lesser: hear two notes, say whether the second went up or down
 // the Greater / lesser lessons play their notes closer together
-const GL_GAP = 0.6;
-export const HIGHER = '↑ Higher';
-export const LOWER = '↓ Lower';
+const GL_GAP = 0.5; // the player's Gap slider (ListenTiming.jsx) overrides it
+// Four slope pictures per question, one of each kind: a small step up, a big jump up, a
+// small step down, a big jump down, in a random order. The right one is drawn from the
+// notes played, the others from random pairs of their kind. Each option is two note
+// names ("C E"); q.slopes gives their pitches. Distance 4 is left out so small (1-3
+// semitones) and big (5 or more) look clearly different.
+export const SLOPES = [
+  { up: true, big: false }, { up: true, big: true }, { up: false, big: false }, { up: false, big: true },
+];
+export const slopeOf = ([a, b]) => SLOPES.find(k => k.up === b > a && k.big === Math.abs(b - a) >= 5);
+const fitsSlope = ([a, b]) => a !== b && Math.abs(b - a) !== 4;
 
 export function higherLowerQuestions(pool, count, random = Math.random) {
-  return twoNoteRounds(pool, count, random).map(([a, b]) => {
-    const [first, second] = parseNotes(`${a} ${b}`);
-    return {
-      prompt: 'Two notes, one after the other. Did the **second** note go **higher** or **lower**?',
-      play: [first, second],
+  const pairs = pool.flatMap(x => pool.map(y => [x, y]))
+    .filter(names => fitsSlope(parseNotes(names.join(' ')).map(n => n.semitone)));
+  const byKind = SLOPES.map(k => pairs.filter(names => slopeOf(parseNotes(names.join(' ')).map(n => n.semitone)) === k));
+  const any = list => list[Math.floor(random() * list.length)];
+  const questions = [];
+  let last = null;
+  while (questions.length < count) {
+    const kind = Math.floor(random() * SLOPES.length);
+    const names = any(byKind[kind]);
+    if (names.join() === last) continue;
+    last = names.join();
+    const answer = names.join(' ');
+    const options = shuffle(byKind.map((list, k) => (k === kind ? answer : any(list).join(' '))), random);
+    questions.push({
+      prompt: 'Two notes, one after the other. Which picture matches: **up or down**, and a **small step or a big jump**?',
+      play: parseNotes(answer),
       gap: GL_GAP,
-      options: [HIGHER, LOWER],
-      answer: second.semitone > first.semitone ? HIGHER : LOWER,
-      reveal: `**${pretty(a)} → ${pretty(b)}**`,
-    };
-  });
+      options,
+      slopes: Object.fromEntries(options.map(o => [o, parseNotes(o).map(n => n.semitone)])),
+      swaras: swaraLabels(options),
+      answer,
+      reveal: swaraReveal(names),
+    });
+  }
+  return questions;
 }
 
 const higherLower = (id, title, pool, range) => ({
   id,
   title,
   theory: [
-    `The app plays **two notes** from ${range}, **one after the other**. You don't press the notes: just say whether the **second** note was **higher** or **lower** than the first.`,
+    `The app plays **two notes** from ${range}, **one after the other**. You don't press the notes: pick the **picture** whose line matches.`,
     { list: [
-      'Press `↑` for **Higher** or `↓` for **Lower** (or click the buttons).',
-      'A wrong answer counts as a mistake; the question stays until you get it.',
+      'There are four pictures: a **small step up**, a **big jump up**, a **small step down** and a **big jump down**, in a random order.',
+      'Higher dots are higher notes. A gentle line is a small step (next key or two over); a steep line is a big jump.',
+      'Click the picture. A wrong answer counts as a mistake; the question stays until you get it.',
       'Press `B` to hear the two notes again.',
       'Once you get it right, the notes play again with their keys lit, then the next question starts.',
     ] },
-    { tip: 'Hum the two notes softly and feel whether your voice went up or down.' },
+    { tip: 'Hum the two notes softly: did your voice go up or down, and did it slide or jump?' },
   ],
   exercise: {
     type: 'choice',
-    keys: { ArrowUp: HIGHER, ArrowDown: LOWER },
     make: () => higherLowerQuestions(pool, 15),
   },
 });
 
-// Greater / lesser with three notes: four slope pictures, one per shape (up-up, up-down,
-// down-up, down-down), in a random order; pick the one that matches the notes played.
-// Each option is three note names ("C E G"); q.slopes gives their pitches for the picture.
-const SHAPES = [[true, true], [true, false], [false, true], [false, false]];
-export const shapeOf = ([a, b, c]) => [b > a, c > b];
+// Greater / lesser with a run of notes (3, 4, 5...): four slope pictures, each a different
+// shape (up or down at every move), in a random order; pick the one that matches the notes
+// played. Three notes have exactly four shapes (up-up, up-down, down-up, down-down), so all
+// four show; longer runs show the played shape and three other random ones.
+// Each option is note names ("C E G"); q.slopes gives their pitches for the picture.
+export const shapeOf = pitches => pitches.slice(1).map((p, i) => p > pitches[i]);
+const shapesOf = n => Array.from({ length: 2 ** (n - 1) }, (_, k) =>
+  Array.from({ length: n - 1 }, (_, i) => !((k >> (n - 2 - i)) & 1)));
 
-// three different-neighbour notes from `pool` (names) that go `shape`
-function threeNotes(pool, [firstUp, secondUp], random) {
+// different-neighbour notes from `pool` (names) that go `shape`, one note more than its moves;
+// `maxStep` (semitones) caps every move, for the close-notes lesson
+function runNotes(pool, shape, random, maxStep = Infinity) {
+  const pitch = name => parseNotes(name)[0].semitone;
   for (;;) {
-    const names = [0, 1, 2].map(() => pool[Math.floor(random() * pool.length)]);
-    const [a, b, c] = parseNotes(names.join(' ')).map(n => n.semitone);
-    if (a !== b && b !== c && (b > a) === firstUp && (c > b) === secondUp) return names;
+    const names = [pool[Math.floor(random() * pool.length)]];
+    for (const up of shape) {
+      const last = pitch(names.at(-1));
+      const next = pool.filter(x => (up ? pitch(x) > last : pitch(x) < last) && Math.abs(pitch(x) - last) <= maxStep);
+      if (!next.length) break;
+      names.push(next[Math.floor(random() * next.length)]);
+    }
+    if (names.length === shape.length + 1) return names;
   }
 }
 
@@ -97,54 +135,79 @@ function shuffle(list, random) {
   return out;
 }
 
-// `count` questions, each shape about as often, never the same three notes twice in a row
-export function threeNoteQuestions(pool, count, random = Math.random) {
+// `count` questions of `n` notes, each shape about as often, never the same notes twice in a row
+export function runQuestions(pool, n, count, random = Math.random, maxStep = Infinity) {
+  // a small pool can't make every shape: k moves the same way in a row need k + 1 different notes
+  // (E F G alone can't climb or slide three times), so those shapes are left out
+  const notes = new Set(pool.map(x => parseNotes(x)[0].semitone)).size;
+  const longestRun = shape => Math.max(...shape.map((d, i) => {
+    let k = 1;
+    while (shape[i + k] === d) k++;
+    return k;
+  }));
+  const shapes = shapesOf(n).filter(shape => longestRun(shape) < notes);
   const questions = [];
   let last = null;
   while (questions.length < count) {
-    const shape = SHAPES[Math.floor(random() * SHAPES.length)];
-    const names = threeNotes(pool, shape, random);
+    const shape = shapes[Math.floor(random() * shapes.length)];
+    const names = runNotes(pool, shape, random, maxStep);
     if (names.join() === last) continue;
     last = names.join();
     const answer = names.join(' ');
-    const others = SHAPES.filter(s => s !== shape).map(s => threeNotes(pool, s, random).join(' '));
+    const others = shuffle(shapes.filter(s => s !== shape), random).slice(0, 3)
+      .map(s => runNotes(pool, s, random, maxStep).join(' '));
     const options = shuffle([answer, ...others], random);
     questions.push({
-      prompt: 'Three notes, one after the other. Which picture has the **same shape**?',
+      prompt: `${WORDS[n]} notes, one after the other. Which picture has the **same shape**?`,
       play: parseNotes(answer),
       gap: GL_GAP,
       options,
-      slopes: Object.fromEntries(options.map(o => [o, parseNotes(o).map(n => n.semitone)])),
+      slopes: Object.fromEntries(options.map(o => [o, parseNotes(o).map(x => x.semitone)])),
+      swaras: swaraLabels(options),
       answer,
-      reveal: `**${names.map(pretty).join(' → ')}**`,
+      reveal: swaraReveal(names),
     });
   }
   return questions;
 }
+export const threeNoteQuestions = (pool, count, random) => runQuestions(pool, 3, count, random);
 
-const higherLowerThree = (id, title, pool, range) => ({
+const WORDS = { 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six' };
+
+// opensOn = 'YYYY-MM-DD': the lesson stays locked until that day (see Course.jsx)
+// maxStep (semitones): every move is at most this big (the close-notes lesson); count = questions
+const higherLowerRun = (id, title, pool, range, n, opensOn, maxStep = Infinity, count = 15) => ({
   id,
   title,
+  ...(opensOn && { opensOn }),
   theory: [
-    `The app plays **three notes** from ${range}, **one after the other**. Then pick the **picture** whose line goes the same way: from the 1st note to the 2nd, and from the 2nd to the 3rd, did it go **up** (increased) or **down** (decreased)?`,
+    `The app plays **${WORDS[n].toLowerCase()} notes** from ${range}, **one after the other**. Then pick the **picture** whose line goes the same way: at every move, from one note to the next, did it go **up** (increased) or **down** (decreased)?`,
     { list: [
-      'Every picture has a different shape: up then up, up then down (/\\), down then up (\\/), or down then down.',
-      'Higher dots are higher notes. Click the picture you heard.',
+      n === 3
+        ? 'Every picture has a different shape: up then up, up then down (/\\), down then up (\\/), or down then down.'
+        : `Every picture has a different shape: ${n - 1} moves, each up or down. Only one matches all of them.`,
+      'Higher dots are higher notes; each row of the grid is one key. Click the picture you heard.',
       'A wrong answer counts as a mistake; the question stays until you get it.',
-      'Press `B` to hear the three notes again.',
+      `Press \`B\` to hear the ${WORDS[n].toLowerCase()} notes again.`,
+      ...(maxStep < Infinity ? ['**Close notes:** every move is only **1 or 2 semitones** (next key, or one key skipped), so listen hard for tiny moves.'] : []),
     ] },
-    { tip: 'Hum along softly and trace the shape with your hand: a climb, a hill, a valley or a slide down.' },
+    { tip: n === 3
+      ? 'Hum along softly and trace the shape with your hand: a climb, a hill, a valley or a slide down.'
+      : 'Say "up" or "down" softly on each move while the notes play, then find the picture that matches your words.' },
   ],
   exercise: {
     type: 'choice',
-    make: () => threeNoteQuestions(pool, 15),
+    make: () => runQuestions(pool, n, count, Math.random, maxStep),
   },
 });
+
+// a lesson with one more theory block at the end
+const withTheory = (lesson, block) => ({ ...lesson, theory: [...lesson.theory, block] });
 
 // ---- Listening cues: one unit per cue, each a two- or three-way choice about a pair of notes ----
 
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const SWARAS = ['Sa', 'Ri1', 'Ri', 'Ga2', 'Ga', 'Ma', 'Ma2', 'Pa', 'Da1', 'Da', 'Ni2', 'Ni'];
+const SWARAS = ['Sa', 'ri', 'Ri', 'ga', 'Ga', 'Ma', 'Ma♯', 'Pa', 'da', 'Da', 'ni', 'Ni'];
 // what the distance between two notes is called, by semitones (1 to 12)
 export const INTERVAL_NAMES = ['', 'half step', 'whole step', 'minor 3rd', 'major 3rd', '4th', 'tritone',
   '5th', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th', 'octave'];
@@ -242,8 +305,8 @@ const feelTheory = how => [
   `The app plays **two notes ${how}**. How do they sound next to each other?`,
   { list: [
     '**Hollow**: open and empty, like a bare frame. A 4th, 5th or octave (Sa–Ma, Sa–Pa, Sa–Sa′).',
-    '**Sweet**: full and warm. A 3rd or 6th (Sa–Ga, Sa–Ga2, Sa–Da, Sa–Da1).',
-    '**Tense**: crunchy, rubbing, wants to move. A 2nd, 7th or tritone (Sa–Ri, Sa–Ni, Sa–Ma2).',
+    '**Sweet**: full and warm. A 3rd or 6th (Sa–Ga, Sa–ga, Sa–Da, Sa–da).',
+    '**Tense**: crunchy, rubbing, wants to move. A 2nd, 7th or tritone (Sa–Ri, Sa–Ni, Sa–Ma♯).',
   ] },
   { tip: 'Hollow and sweet both sound calm: hollow is plain, sweet has colour. Tense is the one that rubs.' },
 ];
@@ -296,13 +359,51 @@ const singleNote = (id, title, pool, range) => ({
 });
 
 export const IDENTIFY_UNITS = [
+  // Greater / lesser, one unit per note count (split 2026-11-13; it was one unit before).
+  // Lessons keep their old id-gl-* ids so their stars stay. All open, in any order.
   {
-    title: 'Greater / lesser',
-    allOpen: true, // the two modes, in either order
+    title: 'Two notes',
+    allOpen: true,
     lessons: [
-      higherLower('id-gl-whites', 'Greater / lesser: 7 white keys', WHITES, 'the **7 white keys**, C to B'),
-      higherLower('id-gl-twelve', 'Greater / lesser: all 12 keys', ALL_TWELVE, '**all 12 keys**, C to B with the black keys'),
-      higherLowerThree('id-gl-three', 'Greater / lesser: three notes', WHITES, 'the **7 white keys**, C to B'),
+      higherLower('id-gl-whites', 'Two notes: white keys', WHITES, 'the **7 white keys**, C to B'),
+      higherLower('id-gl-twelve', 'Two notes: all 12 keys', ALL_TWELVE, '**all 12 keys**, C to B with the black keys'),
+    ],
+  },
+  {
+    title: 'Three notes',
+    allOpen: true,
+    openStart: true,
+    lessons: [
+      higherLowerRun('id-gl-three', 'Three notes: white keys', WHITES, 'the **7 white keys**, C to B', 3),
+      higherLowerRun('id-gl-three-twelve', 'Three notes: all 12 keys', ALL_TWELVE, '**all 12 keys**, C to B with the black keys', 3),
+      higherLowerRun('id-gl-three-close', 'Three notes: 12 keys, close notes', ALL_TWELVE, '**all 12 keys**, C to B with the black keys', 3, undefined, 2),
+      // the middle keys only, like Four notes: only E F G (the user, 2026-11-13)
+      withTheory(higherLowerRun('id-three-efg', 'Three notes: only E F G', ['E', 'F', 'G'], 'just **E, F and G**', 3),
+        { tip: 'E to F is the smallest step there is (one semitone); F to G is two. Up then up can only be E F G, and down then down only G F E.' }),
+    ],
+  },
+  {
+    // the user's plan (2026-11-13): practise four-note shapes deeply, adding one variation at a time
+    title: 'Four notes',
+    allOpen: true,
+    openStart: true,
+    lessons: [
+      higherLowerRun('id-gl-four', 'Four notes: white keys', WHITES, 'the **7 white keys**, C to B', 4),
+      higherLowerRun('id-gl-four-twelve', 'Four notes: all 12 keys', ALL_TWELVE, '**all 12 keys**, C to B with the black keys', 4),
+      higherLowerRun('id-four-close', 'Four notes: 12 keys, close notes', ALL_TWELVE, '**all 12 keys**, C to B with the black keys', 4, undefined, 2),
+      // the middle keys only: C D and A B were easy to tell apart (the user, 2026-11-13)
+      withTheory(higherLowerRun('id-four-efg', 'Four notes: only E F G', ['E', 'F', 'G'], 'just **E, F and G**', 4),
+        { tip: 'With only three keys it can never go the same way three times, so there are 6 shapes, not 8. E to F is the smallest step there is (one semitone); F to G is two.' }),
+    ],
+  },
+  {
+    // one more note at a time (the user's plan: no rushing), so these open on a date
+    title: 'Five notes',
+    allOpen: true,
+    openStart: true,
+    lessons: [
+      higherLowerRun('id-gl-five', 'Five notes: white keys', WHITES, 'the **7 white keys**, C to B', 5, '2026-11-23'),
+      higherLowerRun('id-gl-five-twelve', 'Five notes: all 12 keys', ALL_TWELVE, '**all 12 keys**, C to B with the black keys', 5, '2026-11-23'),
     ],
   },
   {

@@ -10,6 +10,7 @@ describe('decoded songs', () => {
     for (const song of decoded) {
       const scale = SCALES.find(s => s.name === song.scale);
       expect(scale, `${song.id}: ${song.scale}`).toBeDefined();
+      if (song.chromatic) continue; // leans on notes outside its scale on purpose
       const inScale = new Set(scale.pitches.map(p => ((p % 12) + 12) % 12));
       const notes = song.events.flatMap(e => e.notes);
       const outside = notes.filter(n => !inScale.has(n.semitone)).length;

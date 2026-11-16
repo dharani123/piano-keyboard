@@ -58,10 +58,10 @@ export const TALAMS = {
 };
 
 // How swaras are shown (the user's own names): each key above Sa has one name,
-// whatever role it plays in the raga. White keys take the plain swara (D = Ri,
-// E = Ga …); C♯ = Ri1, D♯ = Ga2, F♯ = Ma2, G♯ = Da1, A♯ = Ni2.
+// whatever role it plays in the raga. White keys take the plain swara (D = Ri, E = Ga …);
+// black keys: C♯ = ri, D♯ = ga, G♯ = da, A♯ = ni (small = the lower one), F♯ = Ma♯.
 // A dot above marks the upper octave (Ṡa), below the lower (Ṇi).
-export const SWARA_BY_SEMITONE = ['Sa', 'Ri1', 'Ri', 'Ga2', 'Ga', 'Ma', 'Ma2', 'Pa', 'Da1', 'Da', 'Ni2', 'Ni'];
+export const SWARA_BY_SEMITONE = ['Sa', 'ri', 'Ri', 'ga', 'Ga', 'Ma', 'Ma♯', 'Pa', 'da', 'Da', 'ni', 'Ni'];
 const dotted = (name, dot) => `${name[0]}${dot}${name.slice(1)}`;
 // semis = semitones above Sa (may be negative or past the octave)
 export const swaraName = semis => {

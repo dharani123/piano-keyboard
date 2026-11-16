@@ -6,6 +6,7 @@ import RhythmExercise from './RhythmExercise.jsx';
 import EarExercise from './EarExercise.jsx';
 import ChoiceExercise from './ChoiceExercise.jsx';
 import PlaylistExercise from './PlaylistExercise.jsx';
+import FlowExercise from './FlowExercise.jsx';
 import { playingViewDelta } from '../../lessons/playingView.js';
 import { PASS_STARS } from '../../lessons/progress.js';
 
@@ -74,19 +75,9 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
     setPhase('exercise');
   }
 
-  // N = Next lesson, live only while its button shows (N plays no note)
-  const canNext = phase === 'result' && Math.max(result?.stars ?? 0, bestStars) >= PASS_STARS && hasNext;
+  // Next lesson button (its N shortcut was removed 2026-11-13: N now answers choice questions)
+  const canNext = phase === 'result' && (lesson.unscored || Math.max(result?.stars ?? 0, bestStars) >= PASS_STARS) && hasNext;
   const next = () => { onNext(); pageRef.current?.scrollIntoView({ behavior: 'smooth' }); };
-  const shortcuts = useRef({});
-  shortcuts.current = { KeyN: canNext ? next : null };
-  useEffect(() => {
-    const onKey = e => {
-      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea')) return;
-      shortcuts.current[e.code]?.();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
 
   // Space (or a left Shift tap) = Start exercise / Stop / Try again. During an exercise, one
   // with its own start (rhythm) can take it over through registerStartStop; otherwise
@@ -99,7 +90,7 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
     : () => (exerciseStartStop.current ? exerciseStartStop.current() : show('theory', pageRef.current));
   useEffect(() => piano.onStartStop(() => startStop.current()), []);
 
-  const Exercise = { rhythm: RhythmExercise, ear: EarExercise, choice: ChoiceExercise, playlist: PlaylistExercise }[lesson.exercise.type] ?? StepExercise;
+  const Exercise = { rhythm: RhythmExercise, ear: EarExercise, choice: ChoiceExercise, playlist: PlaylistExercise, flow: FlowExercise }[lesson.exercise.type] ?? StepExercise;
   const backToNotes = () => show('theory', pageRef.current);
 
   const active = phase !== 'theory' && piano.slot && createPortal(
@@ -121,15 +112,19 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
       )}
       {phase === 'result' && (
         <div className="result">
-          <div className="result-stars">
-            {[0, 1, 2].map(i => <span key={i} className={i < result.stars ? 'on' : ''}>★</span>)}
-          </div>
-          <p className="result-msg">{MESSAGES[result.stars]}</p>
+          {lesson.unscored
+            ? <p className="result-msg">Done ✓</p>
+            : <>
+              <div className="result-stars">
+                {[0, 1, 2].map(i => <span key={i} className={i < result.stars ? 'on' : ''}>★</span>)}
+              </div>
+              <p className="result-msg">{MESSAGES[result.stars]}</p>
+            </>}
           <p className="result-detail">{result.detail}</p>
           <div className="result-actions">
             <button onClick={retry}>↻ Try again <kbd>Space</kbd></button>
             <button onClick={backToNotes}>Review notes</button>
-            {canNext && <button className="primary" onClick={next}>Next lesson → <kbd>N</kbd></button>}
+            {canNext && <button className="primary" onClick={next}>Next lesson →</button>}
           </div>
         </div>
       )}

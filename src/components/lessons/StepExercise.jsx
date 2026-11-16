@@ -8,6 +8,7 @@ import {
 } from '../../lessons/stepTrainer.js';
 import RichText from './RichText.jsx';
 import Staff from '../sheet/Staff.jsx';
+import { useListenTiming } from './ListenTiming.jsx';
 
 const DEMO_CHORD_GAP = 1.8; // seconds between chords in "Hear the whole loop"
 
@@ -44,12 +45,22 @@ export default function StepExercise({ exercise, piano, onProgress, onComplete }
   }, [state.index, state.status]);
 
   // Ear training: play the prompt when a step that has one comes up
-  // gap = seconds from one note's start to the next (a step's `gap`, else 0.55)
-  function audition(ns, chord, gap = 0.55) {
+  // notes one after the other are spaced by the player's Gap slider, the last one ringing for
+  // the Last note slider (ListenTiming.jsx); a chord plays all at once
+  // (the sliders follow the prompt being replayed, else the step's "Hear it" notes)
+  const replayStep = step && state.steps.slice(0, state.index + 1).findLast(s => s.play);
+  const replay = replayStep?.play;
+  const timed = (replay && !replayStep.together && replay.length > 1 && replay)
+    || (step?.listen && !step.chord && step.listen.length > 1 && step.listen);
+  // gaps are drawn again per prompt (its step), not per key pressed while answering it
+  const timing = useListenTiming(timed ? timed.length : 2, replay ? state.steps.slice(0, state.index + 1).findLastIndex(s => s.play) : state.index);
+  function audition(ns, chord) {
     const start = engine.now() + 0.05;
+    const at = timing.starts(ns.length);
     ns.forEach((n, i) => {
       const freq = frequency(state.baseOctave + n.oct, n.semitone, piano.transpose);
-      engine.playNote(freq, piano.instrumentId, chord ? start : start + i * gap, chord ? 1.4 : Math.min(0.8, gap * 0.9));
+      const len = chord ? 1.4 : i === ns.length - 1 ? timing.hold : Math.min(0.8, timing.gap(i) * 0.9);
+      engine.playNote(freq, piano.instrumentId, chord ? start : start + at[i], len);
     });
   }
   // D major: fill in the key the keyboard couldn't catch
@@ -73,15 +84,13 @@ export default function StepExercise({ exercise, piano, onProgress, onComplete }
   useEffect(() => {
     if (!step?.play) return;
     // short pause so the prompt doesn't collide with the note just played
-    const t = setTimeout(() => audition(step.play, step.together, step.gap), state.index === 0 ? 150 : 600);
+    const t = setTimeout(() => audition(step.play, step.together), state.index === 0 ? 150 : 600);
     return () => clearTimeout(t);
   }, [state.index]);
 
-  // Most recent prompt at or before the current step, for "Hear again" (also on B)
-  const replayStep = step && state.steps.slice(0, state.index + 1).findLast(s => s.play);
-  const replay = replayStep?.play;
+  // Most recent prompt at or before the current step (replayStep above), for "Hear again" (also on B)
   const hearAgain = useRef();
-  hearAgain.current = replay ? () => audition(replay, replayStep.together, replayStep.gap) : null;
+  hearAgain.current = replay ? () => audition(replay, replayStep.together) : null;
   useEffect(() => {
     const onKey = e => {
       if (e.code !== 'KeyB' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea')) return;
@@ -124,6 +133,7 @@ export default function StepExercise({ exercise, piano, onProgress, onComplete }
         {step && exercise.demo && <button onClick={playDemo}>🔊 Hear the whole loop</button>}
         {replay && <button onClick={hearAgain.current}>🔊 Hear again <kbd>B</kbd></button>}
         {step?.listen && <button onClick={() => audition(step.listen, step.chord)}>🔊 Hear it</button>}
+        {timed && timing.sliders}
         <span className="counter">{Math.min(state.index + 1, total)} / {total} · mistakes {state.mistakes}</span>
       </div>
       <div className="progress"><div className="progress-bar" style={{ width: `${(state.index / total) * 100}%` }} /></div>

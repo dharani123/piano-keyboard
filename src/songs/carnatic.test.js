@@ -13,14 +13,14 @@ describe('parseSwaras', () => {
     expect(totalBeats).toBe(6);
   });
 
-  it('names swaras by key: white = plain, C♯ Ri1, D♯ Ga2, F♯ Ma2, G♯ Da1, A♯ Ni2', () => {
+  it('names swaras by key: white = plain, C♯ ri, D♯ ga, F♯ Ma♯, G♯ da, A♯ ni', () => {
     const names = raga => parseSwaras("S R G M P D N S'", raga).events.map(e => e.notes[0].name);
-    expect(names('mayamalavagowla')).toEqual(['Sa', 'Ri1', 'Ga', 'Ma', 'Pa', 'Da1', 'Ni', 'S\u0307a']);
+    expect(names('mayamalavagowla')).toEqual(['Sa', 'ri', 'Ga', 'Ma', 'Pa', 'da', 'Ni', 'S\u0307a']);
     expect(names('shankarabharanam')).toEqual(['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', 'S\u0307a']);
-    expect(names('kanakangi')).toEqual(['Sa', 'Ri1', 'Ri', 'Ma', 'Pa', 'Da1', 'Da', 'S\u0307a']);
-    expect(names('kalyani')).toEqual(['Sa', 'Ri', 'Ga', 'Ma2', 'Pa', 'Da', 'Ni', 'S\u0307a']);
-    expect(names('kharaharapriya')).toEqual(['Sa', 'Ri', 'Ga2', 'Ma', 'Pa', 'Da', 'Ni2', 'S\u0307a']);
-    expect(parseSwaras("R' N.", 'mayamalavagowla').events.map(e => e.notes[0].name)).toEqual(['R\u0307i1', 'N\u0323i']);
+    expect(names('kanakangi')).toEqual(['Sa', 'ri', 'Ri', 'Ma', 'Pa', 'da', 'Da', 'S\u0307a']);
+    expect(names('kalyani')).toEqual(['Sa', 'Ri', 'Ga', 'Ma♯', 'Pa', 'Da', 'Ni', 'S\u0307a']);
+    expect(names('kharaharapriya')).toEqual(['Sa', 'Ri', 'ga', 'Ma', 'Pa', 'Da', 'ni', 'S\u0307a']);
+    expect(parseSwaras("R' N.", 'mayamalavagowla').events.map(e => e.notes[0].name)).toEqual(['r\u0307i', 'N\u0323i']);
   });
 
   it('uses the white keys in Shankarabharanam', () => {

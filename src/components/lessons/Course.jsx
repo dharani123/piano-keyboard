@@ -6,6 +6,15 @@ import LessonPage from './LessonPage.jsx';
 // Used by Lessons and Sheet Reading; both keep their stars in the same
 // progress store (lesson ids are unique across courses).
 
+// A lesson with opensOn = 'YYYY-MM-DD' stays locked until that day (local time), even with
+// Unlock all or in an allOpen unit: it paces the course a week at a time on purpose.
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const notYet = lesson => lesson.opensOn && lesson.opensOn > today();
+const opensLabel = lesson => new Date(`${lesson.opensOn}T00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
 function remembered(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }
@@ -15,11 +24,11 @@ export default function Course({ units, lessons, progress, update, piano, title 
   // a unit marked openStart can be started without finishing the units before it
   const opensUnit = i => lessons[i].unit !== lessons[i - 1].unit && units[lessons[i].unit].openStart;
   // a unit marked allOpen has no locks at all: play its lessons in any order
-  const isUnlocked = i => progress.unlockAll || i === 0 || units[lessons[i].unit].allOpen || opensUnit(i) || hasPassed(progress, lessons[i - 1].id);
+  const isUnlocked = i => !notYet(lessons[i]) && (progress.unlockAll || i === 0 || units[lessons[i].unit].allOpen || opensUnit(i) || hasPassed(progress, lessons[i - 1].id));
   const [selected, setSelected] = useState(() => {
     const saved = lessons.findIndex(l => l.id === remembered(storageKey));
     if (saved !== -1 && isUnlocked(saved)) return saved;
-    const next = lessons.findIndex(l => !hasPassed(progress, l.id));
+    const next = lessons.findIndex((l, i) => !hasPassed(progress, l.id) && isUnlocked(i));
     return next === -1 ? 0 : next;
   });
   const lesson = lessons[selected];
@@ -49,20 +58,24 @@ export default function Course({ units, lessons, progress, update, piano, title 
     if (open.length) setSelected(open.find(i => !hasPassed(progress, lessons[i].id)) ?? open[0]);
   }
 
+  // a lesson marked unscored (Ear Training patterns) keeps no stars and doesn't count as passed
   function finish(stars) {
+    if (lesson.unscored) return;
     const best = Math.max(stars, progress.stars[lesson.id] ?? 0);
     update({ ...progress, stars: { ...progress.stars, [lesson.id]: best } });
   }
 
-  const done = lessons.filter(l => hasPassed(progress, l.id)).length;
+  const scored = lessons.filter(l => !l.unscored);
+  const done = scored.filter(l => hasPassed(progress, l.id)).length;
 
   return (
     <div className="lessons with-units">
       <nav className="raga-nav unit-nav">
-        <div className="unit-title sub">{title} · {done}/{lessons.length}</div>
+        <div className="unit-title sub">{title} · {done}/{scored.length}</div>
         {units.map((unit, u) => {
           const inUnit = lessons.map((l, i) => i).filter(i => lessons[i].unit === u);
-          const passed = inUnit.filter(i => hasPassed(progress, lessons[i].id)).length;
+          const counted = inUnit.filter(i => !lessons[i].unscored);
+          const passed = counted.filter(i => hasPassed(progress, lessons[i].id)).length;
           const locked = !inUnit.some(isUnlocked);
           return (
             <button
@@ -72,13 +85,13 @@ export default function Course({ units, lessons, progress, update, piano, title 
             >
               <span className="lesson-link-num">{u + 1}</span>
               <span className="lesson-link-title">{unit.title}</span>
-              <span className="lesson-link-stars">{locked ? '🔒' : `${passed}/${inUnit.length}`}</span>
+              <span className="lesson-link-stars">{locked ? '🔒' : `${passed}/${counted.length}`}</span>
             </button>
           );
         })}
       </nav>
       <aside className="course">
-        <div className="panel-title">{title} · {done}/{lessons.length} passed</div>
+        <div className="panel-title">{title} · {done}/{scored.length} passed</div>
         <div className="pass-rule">{units[viewUnit].allOpen ? 'Play these in any order' : 'Get ★★ to unlock the next lesson'}</div>
         {units.map((unit, u) => u !== viewUnit ? null : (
           <div key={u} className="unit">
@@ -88,12 +101,13 @@ export default function Course({ units, lessons, progress, update, piano, title 
                 key={l.id}
                 className={'lesson-link' + (i === selected ? ' active' : '')}
                 disabled={!isUnlocked(i)}
+                title={notYet(l) ? `Opens on ${opensLabel(l)}` : undefined}
                 onClick={() => setSelected(i)}
               >
                 <span className="lesson-link-num">{l.num}</span>
                 <span className="lesson-link-title">{l.title}</span>
-                <span className="lesson-link-stars">
-                  {!isUnlocked(i) ? '🔒' : progress.stars[l.id] ? '★'.repeat(progress.stars[l.id]) : ''}
+                <span className={'lesson-link-stars' + (notYet(l) ? ' opens' : '')}>
+                  {notYet(l) ? `🔒 ${opensLabel(l)}` : !isUnlocked(i) ? '🔒' : !l.unscored && progress.stars[l.id] ? '★'.repeat(progress.stars[l.id]) : ''}
                 </span>
               </button>
             ))}
@@ -108,8 +122,8 @@ export default function Course({ units, lessons, progress, update, piano, title 
       <LessonPage
         key={lesson.id}
         lesson={lesson}
-        bestStars={progress.stars[lesson.id] ?? 0}
-        hasNext={selected < lessons.length - 1}
+        bestStars={lesson.unscored ? 0 : progress.stars[lesson.id] ?? 0}
+        hasNext={selected < lessons.length - 1 && !notYet(lessons[selected + 1])}
         piano={piano}
         onFinish={finish}
         onNext={() => openLesson(selected + 1)}

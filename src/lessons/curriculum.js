@@ -6,7 +6,7 @@ import { parseNotes } from '../data/songs.js';
 //
 // Theory blocks: a string is a paragraph; { list }, { tip }, and
 // { keys: { mark: [...notes], labels: { note: text } }, caption } draws a
-// mini keyboard. Text supports **bold**, *italic* and `key` markup.
+// mini keyboard; { sheet: song, caption } shows a song's notes in order (NoteSheet). Text supports **bold**, *italic* and `key` markup.
 //
 // Exercises:
 //   { type: 'steps', hint: 'glow' | 'none', make: () => steps, prompt }
@@ -1208,7 +1208,7 @@ export const UNITS = [
           'Compare **C major** and **C minor**. Three notes drop a half step: **E → E♭, A → A♭, B → B♭**. The lowered 3rd (E♭) is what makes it sound minor.',
           { keys: { mark: ['C', 'D', 'D#', 'F', 'G', 'G#', 'A#'], labels: { 'D#': 'E♭', 'G#': 'A♭', 'A#': 'B♭' } }, caption: 'C minor: C D E♭ F G A♭ B♭ C' },
           'On your keyboard: `S` `D` `R` `G` `H` `U` `I` `L`.',
-          'In sargam it is **Sa Ri Ga2 Ma Pa Da1 Ni2**, the raga **Natabhairavi**.',
+          'In sargam it is **Sa Ri ga Ma Pa da ni**, the raga **Natabhairavi**.',
         ],
         exercise: { type: 'steps', hint: 'glow', prompt: 'Play C minor up and back down', make: () => flatSteps('C D D# F G G# A# C+ | A# G# G F D# D C') },
       },
@@ -1240,7 +1240,7 @@ export const UNITS = [
           'This creates a wide gap of **three half steps** between A♭ and B. That gap gives harmonic minor its exotic, Middle-Eastern flavour.',
           { keys: { mark: ['C', 'D', 'D#', 'F', 'G', 'G#', 'B'], labels: { 'D#': 'E♭', 'G#': 'A♭' } }, caption: 'C harmonic minor: C D E♭ F G A♭ B C' },
           'Keys: `S` `D` `R` `G` `H` `U` `K` `L`. Feel the stretch from `U` to `K`.',
-          'Carnatic twin: **Kiravani**, Sa Ri Ga2 Ma Pa Da1 Ni.',
+          'Carnatic twin: **Kiravani**, Sa Ri ga Ma Pa da Ni.',
         ],
         exercise: { type: 'steps', hint: 'glow', prompt: 'Play C harmonic minor up and back down', make: () => flatSteps('C D D# F G G# B C+ | B G# G F D# D C') },
       },
@@ -1269,7 +1269,7 @@ export const UNITS = [
           '**Penta** means five. A pentatonic scale leaves out the two notes most likely to clash, so almost anything you play on it sounds good. It is used in folk songs, blues and rock solos.',
           '**Major pentatonic** = degrees 1 2 3 5 6, which is **C D E G A**. That is raga **Mohanam** (Sa Ri Ga Pa Da)!',
           { keys: { mark: ['C', 'D', 'E', 'G', 'A'], labels: keyLabels(['C', 'D', 'E', 'G', 'A']) }, caption: 'C major pentatonic' },
-          '**Minor pentatonic** = degrees 1 ♭3 4 5 ♭7, which is **C E♭ F G B♭**: the classic blues and rock sound. It is the raga **Suddha Dhanyasi** (Sa Ga2 Ma Pa Ni2).',
+          '**Minor pentatonic** = degrees 1 ♭3 4 5 ♭7, which is **C E♭ F G B♭**: the classic blues and rock sound. It is the raga **Suddha Dhanyasi** (Sa ga Ma Pa ni).',
           { keys: { mark: ['C', 'D#', 'F', 'G', 'A#'], labels: { 'D#': 'E♭', 'A#': 'B♭' } }, caption: 'C minor pentatonic' },
           { tip: 'After the lesson, improvise freely on the major pentatonic. No note can sound wrong.' },
         ],

@@ -17,6 +17,8 @@ const BROWSER_ONLY = [
   'desk-piano-open-sheet-lesson-unit',
   'desk-piano-open-scales-lesson',
   'desk-piano-open-scales-lesson-unit',
+  'desk-piano-open-ear-lesson',
+  'desk-piano-open-ear-lesson-unit',
   'desk-piano-open-identify-lesson',
   'desk-piano-open-identify-lesson-unit',
 ];

@@ -178,6 +178,10 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   z-index: 2;
 }
 .key .note-name { font-size: 14px; font-weight: 700; }
+.key .swara-name { font-size: 11px; opacity: .85; margin-top: 1px; }
+.black .swara-name { font-size: 10px; letter-spacing: -.3px; }
+.size-big .key .swara-name { font-size: 13px; }
+.size-big .black .swara-name { font-size: 11px; }
 
 .key.target { border-color: #9a9ea8; color: #c4c7ce; box-shadow: inset 0 -3px 0 #9a9ea8; }
 .white.down { background: var(--white-key-down); transform: translateY(2px); }
@@ -216,6 +220,7 @@ select.piano-option { padding: 2px 6px; }
 .lesson-link-num { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px; width: 24px; flex-shrink: 0; }
 .lesson-link-title { flex: 1; }
 .lesson-link-stars { color: var(--accent); font-size: 11px; letter-spacing: -1px; }
+.lesson-link-stars.opens { color: var(--muted); letter-spacing: 0; white-space: nowrap; }
 .unlock { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 8px; cursor: pointer; }
 .tanpura-control { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .tanpura-volume input[type="range"] { width: 120px; }
@@ -604,6 +609,7 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .choice-option .slope { display: block; margin: 2px auto; }
 .choice-option.wrong { border-color: var(--wrong); color: var(--wrong); opacity: .7; }
 .choice-option.right { border-color: var(--target); color: var(--target); }
+.choice-option .choice-key { display: block; margin: 3px auto 0; width: fit-content; font-size: .7em; opacity: .6; }
 
 /* in-page yes/no dialog (ConfirmDialog.jsx) */
 .confirm-dialog { background: var(--panel); color: inherit; border: 1px solid var(--muted); border-radius: 10px; padding: 18px 20px; max-width: min(420px, calc(100vw - 32px)); }
@@ -612,3 +618,7 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .confirm-dialog p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .confirm-actions .danger { background: #c0453a; border-color: #c0453a; color: #fff; font-weight: 600; }
+.gap-slider { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.gap-slider input[type="range"] { width: 110px; accent-color: var(--muted); }
+.gap-slider .gap-value { font-family: ui-monospace, monospace; min-width: 44px; }
+.listen-timing { display: inline-flex; flex-wrap: wrap; gap: 10px; }

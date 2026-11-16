@@ -15,6 +15,24 @@ const RAW = [
     pattern: 'E D C/2 | E D C/2 | C/0.5 C/0.5 C/0.5 C/0.5 D/0.5 D/0.5 D/0.5 D/0.5 | E D C/2',
   },
   {
+    id: 'rain-rain',
+    title: 'Rain, Rain, Go Away',
+    level: 'Easy',
+    bpm: 90,
+    hint: 'Only three notes: G, E and A (Pa, Ga, Da). Listen for the little hill G → E → G and the lift up to A.',
+    pattern: 'G E G/0.5 G/0.5 E | G/0.5 G/0.5 E/0.5 E/0.5 A/0.5 A/0.5 G | G/0.5 G/0.5 E/0.5 E/0.5 A/0.5 A/0.5 G | G E G/0.5 G/0.5 E',
+  },
+  {
+    id: 'three-blind-mice',
+    title: 'Three Blind Mice',
+    level: 'Easy',
+    bpm: 100,
+    hint: 'Built from sets of three: "Three blind mice" is E D C (Ga Ri Sa) going down, "see how they run" is G F E (Pa Ma Ga). The middle part climbs up to high C.',
+    pattern: `E/1.5 D/1.5 | C/3 | E/1.5 D/1.5 | C/3 | G/1.5 F F/0.5 | E/3 | G/1.5 F F/0.5 | E/2.5 G/0.5 |
+              C+ C+/0.5 B/0.5 A/0.5 B/0.5 | C+ G/0.5 G G/0.5 | C+/0.5 C+/0.5 C+/0.5 B/0.5 A/0.5 B/0.5 | C+ G/0.5 G G/0.5 |
+              C+/0.5 C+/0.5 C+/0.5 B/0.5 A/0.5 B/0.5 | C+ G/0.5 G F/0.5 | E/1.5 D/1.5 | C/3`,
+  },
+  {
     id: 'mary',
     title: 'Mary Had a Little Lamb',
     level: 'Easy',
@@ -374,6 +392,22 @@ const RAW = [
               D+/0.5 C+/0.25 A/0.75 A/0.5 A/0.75 A/0.75 A/0.5 |
               r/0.5 G/1 G/0.5 G/0.75 E+/0.25 E+/0.25 G+/0.25 E+/0.25 A+/0.75 |
               r/3.5`,
+  },
+  {
+    id: 'pink-panther',
+    title: 'Pink Panther Theme (opening)',
+    level: 'Decoded songs',
+    bpm: 116,
+    decoded: true,
+    scale: 'E minor',
+    // the tune creeps up by half steps (D♯→E, F♯→G), notes outside E minor on purpose
+    chromatic: true,
+    hint: "The sneaky opening, in E minor. It starts with two half steps up: R→F (D♯ E), then Y→H (F♯ G). Then H L K (G, high C, B), F H K (E G B), the long I (B♭), and J H F D F (A G E D E) to finish. Hum the half steps along with it.",
+    // Henry Mancini's "The Pink Panther Theme" (1963), opening phrase only, melody from
+    // memory (not a Songscription sheet), straight eighths. Kept for half-step practice.
+    pattern: `r/0.5 D#/0.5 E/2 r/0.5 F#/0.5 G/2 |
+              r/0.5 D#/0.5 E/0.5 F#/0.5 G/0.5 C+/0.5 B/0.5 E/0.5 G/0.5 B/0.5 A#/3 |
+              A/0.5 G/0.5 E/0.5 D/0.5 E/4`,
   },
   {
     id: 'bbm-piano-piece',

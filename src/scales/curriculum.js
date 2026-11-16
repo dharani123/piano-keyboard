@@ -40,7 +40,7 @@ const KINDS = {
     qualities: ['', 'm', 'm', '', '', 'm', '°'],
     numerals: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'],
     mood: 'bright and happy',
-    // swara names, as the app writes them relative to Sa (Ga2 = the lower Ga, etc.)
+    // swara names, as the app writes them relative to Sa (ga = the lower Ga, ni = the lower Ni, etc.)
     swaras: ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
     main: [0, 3, 4, 0],
     mainName: 'I – IV – V – I',
@@ -52,7 +52,7 @@ const KINDS = {
     qualities: ['m', '°', '', 'm', 'm', '', ''],
     numerals: ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'],
     mood: 'soft and a little sad',
-    swaras: ['Sa', 'Ri', 'Ga2', 'Ma', 'Pa', 'Da1', 'Ni2'],
+    swaras: ['Sa', 'Ri', 'ga', 'Ma', 'Pa', 'da', 'ni'],
     main: [0, 3, 4, 0],
     mainName: 'i – iv – v – i',
   },

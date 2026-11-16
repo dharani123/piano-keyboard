@@ -39,7 +39,7 @@ export default function RelaxMode({ piano, modeSwitch }) {
     const p = Math.min(loadRelaxPos(), lines.length - 1);
     return p - lines[p].line;
   });
-  const [speed, setSpeed] = useState(0.75); // Relax starts at 75%
+  const [speed, setSpeed] = useState(1); // Relax starts at 1st speed
   const [best, setBest] = useState(loadBest); // stars shown in the varisai list
   const [drone, setDrone] = useState(loadTanpura);
   const droneOn = useRef(drone); // read by tuneDrone mid-run
@@ -224,9 +224,11 @@ export default function RelaxMode({ piano, modeSwitch }) {
       if (r.play.done) {
         // played to the end of the exercise: it counts as passed in Practice too
         light([]);
-        setStep('rest');
         markRelaxFinished(lines[plan.segments.at(-1).pos].id);
         setBest(loadBest());
+        // after the last varisai, stop rather than looping back to the first
+        if (plan.segments.at(-1).pos + 1 >= lines.length) { stop(); return; }
+        setStep('rest');
         // a short breather, then straight on to the next varisai
         const np = goTo(plan.segments.at(-1).pos + 1);
         const restEnd = Date.now() + BREATHER * 1000;

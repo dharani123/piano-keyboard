@@ -13,7 +13,7 @@ export default function RagaNav({ raga, disabled, onPick }) {
 
   return (
     <nav className="raga-nav">
-      {['Shuddha Madhyama · Ma', 'Prati Madhyama · Ma2'].map((half, h) => (
+      {['Shuddha Madhyama · Ma', 'Prati Madhyama · Ma♯'].map((half, h) => (
         <div key={half}>
           <div className="unit-title sub">{half}</div>
           {CHAKRAS.slice(h * 6, h * 6 + 6).map((chakra, i) => {

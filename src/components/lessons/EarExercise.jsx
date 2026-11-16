@@ -7,8 +7,10 @@ import { makeRounds } from '../../ear/rounds.js';
 import { startSession, earReducer, RIGHT_DELAY } from '../../ear/session.js';
 import { loadStats, saveStats, recordAnswer, localDay } from '../../ear/stats.js';
 import RichText from './RichText.jsx';
+import { useListenTiming } from './ListenTiming.jsx';
 
-const GAP = 0.6; // seconds between reference C and the target, and between feedback notes
+// seconds between reference C and the target, and between feedback notes, come from the
+// player's Gap slider; the target (the note to name) rings for the Last note slider
 const LENGTH = 0.5;
 const name = semitone => bySemitone[semitone].note.replace('#', '♯');
 
@@ -23,6 +25,8 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
   const round = state.rounds[state.index];
   const total = state.rounds.length;
   const voiceFor = r => r.voice ?? piano.instrumentId;
+  const timing = useListenTiming(2, state.index);
+  const GAP = timing.gap(0); // C → mystery note
 
   useEffect(() => piano.lockTranspose(), []);
   useEffect(() => () => { piano.setHighlight(null); engine.cancelScheduled(); }, []);
@@ -39,13 +43,13 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
   }, [givenRounds]);
 
   // Ear exercises always sound at transpose 0 (the App holds it there while we're mounted)
-  function play(semitone, oct, voice, at) {
-    engine.playNote(frequency(baseOctave + oct, semitone, 0), voice, at, LENGTH);
+  function play(semitone, oct, voice, at, length = LENGTH) {
+    engine.playNote(frequency(baseOctave + oct, semitone, 0), voice, at, length);
   }
   function playRound(r, withReference) {
     const start = engine.now() + 0.05;
     if (withReference) play(0, 0, voiceFor(r), start);
-    play(r.target, r.oct, voiceFor(r), withReference ? start + GAP : start);
+    play(r.target, r.oct, voiceFor(r), withReference ? start + GAP : start, timing.hold);
     return withReference ? GAP : 0;
   }
   const hearC = () => play(0, 0, piano.instrumentId, engine.now() + 0.05);
@@ -94,7 +98,7 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
     if (state.last.answered !== null && press) {
       engine.playNote(frequency(press.octave, press.semitone, 0), voiceFor(round), start, LENGTH);
     }
-    play(round.target, round.oct, voiceFor(round), start + GAP);
+    play(round.target, round.oct, voiceFor(round), start + GAP, timing.hold);
   }, [state.last]);
 
   // First answer of each round goes to the stats (or to the Gym, which keeps its own)
@@ -158,6 +162,7 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
         <div className="exercise-actions">
           <button onClick={playIntro}>🔊 Play again <kbd>B</kbd></button>
           <button className="primary" onClick={() => { engine.cancelScheduled(); setIntroDone(true); }}>Start ▶</button>
+          {timing.sliders}
         </div>
       </div>
     );
@@ -186,6 +191,7 @@ export default function EarExercise({ exercise, piano, onProgress, onComplete, r
       <div className="exercise-actions">
         {state.phase !== 'done' && <button onClick={() => playRound(round, round.reference)}>🔊 Hear again <kbd>B</kbd></button>}
         {state.phase !== 'done' && exercise.reference !== 'every' && <button onClick={hearC}>🔊 Hear C</button>}
+        {state.phase !== 'done' && timing.sliders}
         <span className="counter">{Math.min(state.index + 1, total)} / {total} · mistakes {state.mistakes}</span>
       </div>
       <div className="progress"><div className="progress-bar" style={{ width: `${(state.index / total) * 100}%` }} /></div>

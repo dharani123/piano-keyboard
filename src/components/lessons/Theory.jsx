@@ -1,6 +1,7 @@
 import RichText from './RichText.jsx';
 import MiniKeys from './MiniKeys.jsx';
 import Staff from '../sheet/Staff.jsx';
+import NoteSheet from '../songs/NoteSheet.jsx';
 
 export default function Theory({ blocks }) {
   return (
@@ -12,6 +13,14 @@ export default function Theory({ blocks }) {
         }
         if (block.tip) return <p key={i} className="tip">💡 <RichText text={block.tip} /></p>;
         if (block.staff) return <Staff key={i} {...block.staff} caption={block.caption} />;
+        if (block.sheet) {
+          return (
+            <div key={i}>
+              <div className="sheet-title">{block.caption}</div>
+              <NoteSheet song={block.sheet} />
+            </div>
+          );
+        }
         if (block.keys) {
           return (
             <figure key={i}>

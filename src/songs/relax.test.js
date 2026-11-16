@@ -7,8 +7,8 @@ describe('journeyLines', () => {
 
   it('starts with Sarali 1 and keeps the traditional order', () => {
     expect(lines[0]).toMatchObject({ title: 'Sarali Varisai 1', line: 0, lines: 2 });
-    expect(lines[0].events.map(e => e.notes[0].name).join(' ')).toBe('Sa Ri1 Ga Ma Pa Da1 Ni S\u0307a');
-    expect(lines[1].events.map(e => e.notes[0].name).join(' ')).toBe('S\u0307a Ni Da1 Pa Ma Ga Ri1 Sa');
+    expect(lines[0].events.map(e => e.notes[0].name).join(' ')).toBe('Sa ri Ga Ma Pa da Ni S\u0307a');
+    expect(lines[1].events.map(e => e.notes[0].name).join(' ')).toBe('S\u0307a Ni da Pa Ma Ga ri Sa');
     expect(lines.at(-1).title).toBe('Dhatu Varisai 3');
     expect(lines[0].id).toBe('sarali-1@mayamalavagowla');
   });
