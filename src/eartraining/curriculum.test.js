@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { EAR_UNITS, EAR_LESSONS, patternRounds, possiblePatterns } from './curriculum.js';
 import { buildFlow, segmentAt, ROUNDS, REST_BEATS } from './flow.js';
 
-const IDENTIFY = ['Identify 1 note', 'Identify 2 notes', 'Identify 3 notes', 'Identify 4 notes', 'Identify 5 notes'];
+const IDENTIFY = ['Identify 1 note', 'Identify 2 notes', 'Identify 3 notes', 'Identify 4 notes'];
 
 describe('ear training', () => {
   it('has the three basic-pattern units, Sa Ri then adding Ga then Ma', () => {
@@ -24,7 +24,7 @@ describe('ear training', () => {
     });
   });
 
-  it('Identify 1 to 5 notes ask for the picture of 10 patterns, up to four different options each', () => {
+  it('Identify 1 to 4 notes ask for the picture of 10 patterns, up to four different options each', () => {
     const pools = [[0, 2], [0, 2, 4], [0, 2, 4, 5], [0, 2, 4, 5, 7]];
     for (const lesson of EAR_LESSONS.filter(l => l.exercise.type === 'choice')) {
       const n = Number(lesson.id.at(-1));
@@ -62,7 +62,7 @@ describe('ear training', () => {
     expect(last.song.totalBeats).toBe(8 * ROUNDS);
     expect(swaras(flow('et-srg-p6'), 0)).toBe(`${'Ga Ri Sa Ga Ri Sa '.repeat(ROUNDS)}`.trim());
     expect(swaras(flow('et-srgm-p1'), 0)).toBe(`${'Sa Sa Sa Sa Ri Ri Ri Ri Ga Ga Ga Ga Ma Ma Ma Ma '.repeat(ROUNDS)}`.trim());
-    expect(EAR_UNITS[2].lessons).toHaveLength(12);
+    expect(EAR_UNITS[2].lessons).toHaveLength(11);
     expect(swaras(flow('et-srgmp-p7'), 0)).toBe(`${'Sa Ri Ga Ma Pa Pa Ma Ga Ri Sa '.repeat(ROUNDS)}`.trim());
     expect(EAR_UNITS.every(u => u.allOpen)).toBe(true);
     // only the Identify lessons keep stars

@@ -2,7 +2,7 @@ import { parseNotes } from '../data/songs.js';
 import { buildFlow, ROUNDS } from './flow.js';
 
 // The Ear Training tab: basic swara patterns (Sa = C). Each unit has seven fixed patterns
-// that fall like Relax (exercise type 'flow', see flow.js), then five practice lessons (1 to 5
+// that fall like Relax (exercise type 'flow', see flow.js), then four practice lessons (1 to 4
 // swaras) that play random swaras and ask for the matching picture (type 'choice', like Identify Notes).
 // Same lesson format as lessons/curriculum.js.
 
@@ -119,7 +119,8 @@ const unit = (title, key, pool, letters) => {
     allOpen: true,
     lessons: [
       ...patterns.map((p, i) => patternLesson(`et-${key}-p${i + 1}`, i + 1, pool, patterns)),
-      ...[1, 2, 3, 4, 5].map(n => identifyLesson(`et-${key}-id${n}`, pool, n)),
+      // Identify 5 notes was removed 2026-11-16 (the user: add it back later); WORD/EXAMPLE still cover 5
+      ...[1, 2, 3, 4].map(n => identifyLesson(`et-${key}-id${n}`, pool, n)),
     ],
   };
 };
