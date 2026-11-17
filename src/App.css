@@ -219,6 +219,9 @@ select.piano-option { padding: 2px 6px; }
 .lesson-link:disabled { opacity: .4; cursor: not-allowed; }
 .lesson-link-num { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px; width: 24px; flex-shrink: 0; }
 .lesson-link-title { flex: 1; }
+/* Ear Training subheadings (3.1 Patterns, 3.2 Identify Notes, 3.3 Play It Back) */
+.section-title { display: flex; align-items: baseline; font-size: 12px; font-weight: 600; color: var(--text); margin: 10px 0 2px; padding: 0 9px; gap: 8px; }
+.section-title .lesson-link-num { width: 24px; }
 .lesson-link-stars { color: var(--accent); font-size: 11px; letter-spacing: -1px; }
 .lesson-link-stars.opens { color: var(--muted); letter-spacing: 0; white-space: nowrap; }
 .unlock { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 8px; cursor: pointer; }

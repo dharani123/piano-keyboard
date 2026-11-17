@@ -7,6 +7,7 @@ import EarExercise from './EarExercise.jsx';
 import ChoiceExercise from './ChoiceExercise.jsx';
 import PlaylistExercise from './PlaylistExercise.jsx';
 import FlowExercise from './FlowExercise.jsx';
+import PlaybackExercise from './PlaybackExercise.jsx';
 import { playingViewDelta } from '../../lessons/playingView.js';
 import { PASS_STARS } from '../../lessons/progress.js';
 
@@ -90,7 +91,7 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
     : () => (exerciseStartStop.current ? exerciseStartStop.current() : show('theory', pageRef.current));
   useEffect(() => piano.onStartStop(() => startStop.current()), []);
 
-  const Exercise = { rhythm: RhythmExercise, ear: EarExercise, choice: ChoiceExercise, playlist: PlaylistExercise, flow: FlowExercise }[lesson.exercise.type] ?? StepExercise;
+  const Exercise = { rhythm: RhythmExercise, ear: EarExercise, choice: ChoiceExercise, playlist: PlaylistExercise, flow: FlowExercise, playback: PlaybackExercise }[lesson.exercise.type] ?? StepExercise;
   const backToNotes = () => show('theory', pageRef.current);
 
   const active = phase !== 'theory' && piano.slot && createPortal(

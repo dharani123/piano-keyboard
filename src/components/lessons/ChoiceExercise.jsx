@@ -31,14 +31,24 @@ const MAX_SPAN = 216;
 const SIDE = 14;
 // labels (q.swaras, the Greater / lesser lessons): a swara name under each dot, on every option (the user, 2026-11-14)
 const LABEL_H = 13;
-function Slope({ pitches, starts, labels }) {
+// near (q.labelsNearDots, the Ear Training tab, the user 2026-11-17): each name sits by its dot
+// instead, above a dot the line rises into or peaks at, below one it falls into or dips to
+const aboveDot = (pitches, i) => {
+  const prev = pitches[i - 1], next = pitches[i + 1];
+  if (prev === undefined && next === undefined) return true;
+  if (prev === undefined) return next < pitches[i];
+  if (next === undefined) return prev < pitches[i];
+  return prev + next <= 2 * pitches[i];
+};
+function Slope({ pitches, starts, labels, near }) {
   const total = starts.at(-1) || 1;
   const span = Math.min(total * PX_PER_SECOND, MAX_SPAN);
   const x = i => (pitches.length === 1 ? SIDE : SIDE + (starts[i] / total) * span);
   const width = SIDE * 2 + (pitches.length === 1 ? 0 : span);
-  const y = p => TOP + (11 - p) * ROW;
+  const pad = labels && near ? LABEL_H : 0;
+  const y = p => pad + TOP + (11 - p) * ROW;
   const points = pitches.map((p, i) => `${x(i)},${y(p)}`).join(' ');
-  const height = TOP * 2 + 11 * ROW + (labels ? LABEL_H : 0);
+  const height = TOP * 2 + 11 * ROW + (labels ? (near ? 2 * LABEL_H : LABEL_H) : 0);
   return (
     <svg className="slope" viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true">
       {[...Array(12).keys()].map(p => (
@@ -46,7 +56,10 @@ function Slope({ pitches, starts, labels }) {
       ))}
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {pitches.map((p, i) => <circle key={i} cx={x(i)} cy={y(p)} r="3.5" fill="currentColor" />)}
-      {labels?.map((l, i) => <text key={i} x={x(i)} y={height - 2} textAnchor="middle" fontSize="10" fill="currentColor">{l}</text>)}
+      {labels?.map((l, i) => {
+        const ly = !near ? height - 2 : aboveDot(pitches, i) ? y(pitches[i]) - 6 : y(pitches[i]) + 13;
+        return <text key={i} x={x(i)} y={ly} textAnchor="middle" fontSize="10" fontWeight={near ? 600 : undefined} fill="currentColor">{l}</text>;
+      })}
     </svg>
   );
 }
@@ -134,7 +147,8 @@ export default function ChoiceExercise({ exercise, piano, onProgress, onComplete
     if (index + 1 >= total) {
       onComplete({
         stars: starsForMistakes(mistakes, total),
-        detail: mistakes === 0 ? 'No mistakes, perfect!' : `${mistakes} wrong ${mistakes === 1 ? 'answer' : 'answers'}`,
+        // exercise.noMistakes (Ear Training): nothing is counted, just a closing line
+        detail: exercise.noMistakes ? `${total} questions done` : mistakes === 0 ? 'No mistakes, perfect!' : `${mistakes} wrong ${mistakes === 1 ? 'answer' : 'answers'}`,
       });
       return;
     }
@@ -155,7 +169,7 @@ export default function ChoiceExercise({ exercise, piano, onProgress, onComplete
             className={'choice-option' + (wrong.includes(o) ? ' wrong' : '') + (right && o === q.answer ? ' right' : '')}
             onClick={() => pick(o)}
           >
-            {q.slopes ? <Slope pitches={q.slopes[o]} starts={timing.starts(q.slopes[o].length)} labels={q.swaras?.[o]} /> : <RichText text={o} />}
+            {q.slopes ? <Slope pitches={q.slopes[o]} starts={timing.starts(q.slopes[o].length)} labels={q.swaras?.[o]} near={q.labelsNearDots} /> : <RichText text={o} />}
             {OPTION_KEYS[i] && <kbd className="choice-key">{OPTION_KEYS[i][1]}</kbd>}
           </button>
         ))}
@@ -166,7 +180,7 @@ export default function ChoiceExercise({ exercise, piano, onProgress, onComplete
       <div className="exercise-actions">
         {q.play && !right && <button onClick={() => listen()}>🔊 Hear again <kbd>B</kbd></button>}
         {q.play && !q.together && timing.sliders}
-        <span className="counter">{index + 1} / {total} · mistakes {mistakes}</span>
+        <span className="counter">{index + 1} / {total}{!exercise.noMistakes && <> · mistakes {mistakes}</>}</span>
       </div>
       <div className="progress"><div className="progress-bar" style={{ width: `${(index / total) * 100}%` }} /></div>
     </div>

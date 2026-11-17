@@ -4,20 +4,21 @@ import { loadProgress, saveProgress } from '../../lessons/progress.js';
 import Course from './Course.jsx';
 import { SHEET_UNITS, SHEET_LESSONS } from '../../sheet/curriculum.js';
 import { SCALE_UNITS, SCALE_LESSONS } from '../../scales/curriculum.js';
-import { IDENTIFY_UNITS, IDENTIFY_LESSONS } from '../../identify/curriculum.js';
 import { EAR_UNITS, EAR_LESSONS } from '../../eartraining/curriculum.js';
 import SongsMode from '../songs/SongsMode.jsx';
 import RelaxMode from '../songs/RelaxMode.jsx';
 
 const CARNATIC_MODE_KEY = 'desk-piano-carnatic-mode';
 const TAB_KEY = 'desk-piano-tab';
-const TABS = ['carnatic', 'lessons', 'scales', 'identify', 'ear', 'western', 'decoded', 'sheet'];
+// The Identify Notes tab was removed 2026-11-17 (Ear Training covers it); src/identify is kept, unused
+const TABS = ['carnatic', 'lessons', 'scales', 'ear', 'western', 'decoded', 'sheet'];
 
 export default function Lessons({ piano }) {
   const [progress, setProgress] = useState(loadProgress);
   const [tab, setTab] = useState(() => {
     try {
       const saved = localStorage.getItem(TAB_KEY);
+      if (saved === 'identify') return 'ear';
       return TABS.includes(saved) ? saved : 'carnatic';
     } catch { return 'carnatic'; }
   });
@@ -56,16 +57,13 @@ export default function Lessons({ piano }) {
         <button className={tab === 'carnatic' ? 'active' : ''} onClick={() => setTab('carnatic')}>Carnatic 🪕</button>
         <button className={tab === 'lessons' ? 'active' : ''} onClick={() => setTab('lessons')}>Lessons 📚</button>
         <button className={tab === 'scales' ? 'active' : ''} onClick={() => setTab('scales')}>Scales 🎹</button>
-        <button className={tab === 'identify' ? 'active' : ''} onClick={() => setTab('identify')}>Identify Notes 👂</button>
         <button className={tab === 'ear' ? 'active' : ''} onClick={() => setTab('ear')}>Ear Training 🎧</button>
         <button className={tab === 'western' ? 'active' : ''} onClick={() => setTab('western')}>Western Music 🎵</button>
         <button className={tab === 'decoded' ? 'active' : ''} onClick={() => setTab('decoded')}>Decoded Songs 🎼</button>
         <button className={tab === 'sheet' ? 'active' : ''} onClick={() => setTab('sheet')}>Sheet Reading 📜</button>
       </div>
       {tab === 'carnatic' && carnaticMode === 'relax' ? <RelaxMode piano={piano} modeSwitch={modeSwitch} /> : tab === 'western' || tab === 'decoded' || tab === 'carnatic' ? <SongsMode key={tab} kind={tab} piano={piano} modeSwitch={tab === 'carnatic' ? modeSwitch : null} /> : (
-      tab === 'identify'
-        ? <Course key="identify" storageKey="desk-piano-open-identify-lesson" title="Identify notes" units={IDENTIFY_UNITS} lessons={IDENTIFY_LESSONS} progress={progress} update={update} piano={piano} />
-        : tab === 'ear'
+      tab === 'ear'
         ? <Course key="ear" storageKey="desk-piano-open-ear-lesson" title="Ear training" units={EAR_UNITS} lessons={EAR_LESSONS} progress={progress} update={update} piano={piano} />
         : tab === 'scales'
         ? <Course key="scales" storageKey="desk-piano-open-scales-lesson" title="Scales" units={SCALE_UNITS} lessons={SCALE_LESSONS} progress={progress} update={update} piano={piano} />

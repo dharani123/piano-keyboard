@@ -44,7 +44,7 @@ function patternLesson(id, num, pool, patterns) {
   return {
     id,
     title: `Pattern ${num}`,
-    unscored: true, // no stars: only the Identify lessons are scored
+    unscored: true, // no stars anywhere in Ear Training
     theory: [
       `The swaras of each pattern fall onto the keys: play each one as it reaches the piano. Pattern ${num} plays twice, then the next pattern starts by itself, on to the last one.`,
       keyPicture(pool),
@@ -62,7 +62,7 @@ function patternLesson(id, num, pool, patterns) {
 
 // Practice: hear n swaras (1 to 5) from the unit's swaras, then pick the matching picture,
 // like the Identify Notes tab: up to four line graphs, each a different pattern, swara names
-// under each dot (fewer when there aren't four patterns: one note from Sa, Ri has just two).
+// beside each dot (labelsNearDots, the user 2026-11-17, to tie the names to the ups and downs) (fewer when there aren't four patterns: one note from Sa, Ri has just two).
 // Notes are spaced by the player's Gap / Last note sliders (ListenTiming.jsx).
 export function patternQuestions(pool, n, count, random = Math.random) {
   const size = Math.min(4, possiblePatterns(pool, n));
@@ -77,6 +77,7 @@ export function patternQuestions(pool, n, count, random = Math.random) {
       options: shuffled,
       slopes: Object.fromEntries(shuffled.map(o => [o, parseNotes(o).map(x => x.semitone)])),
       swaras: Object.fromEntries(shuffled.map(o => [o, o.split(' ').map(x => SWARA_OF[x])])),
+      labelsNearDots: true,
       answer,
       reveal: `**${names.map(x => SWARA_OF[x]).join(' → ')}**`,
     };
@@ -91,13 +92,14 @@ function identifyLesson(id, pool, n) {
   return {
     id,
     title: `Identify ${n} note${n > 1 ? 's' : ''}`,
+    unscored: true, // no stars or mistakes anywhere in Ear Training (the user, 2026-11-17: just chilling and learning)
     theory: [
       `The app plays ${what} from ${list(pool)}${n > 1 ? ', one after the other' : ''}. You don't press the notes: pick the **picture** that matches.`,
       keyPicture(pool),
       { list: [
         'Each picture is a different pattern. Higher dots are higher swaras, and the swara names are under the dots.',
         ...(n > 1 ? [`A swara can come more than once ${EXAMPLE[n]}: then the line stays flat.`] : []),
-        'Click the picture. A wrong answer counts as a mistake; the question stays until you get it.',
+        'Click the picture. A wrong pick just turns red; the question stays until you get it.',
         `Press \`B\` to hear ${it} again.`,
       ] },
       { tip: n === 1
@@ -106,7 +108,42 @@ function identifyLesson(id, pool, n) {
     ],
     exercise: {
       type: 'choice',
+      noMistakes: true,
       make: () => patternQuestions(pool, n, QUESTIONS),
+    },
+  };
+}
+
+// Play it back (every unit, the user 2026-11-17): the app plays n swaras, you play
+// keys until your last n notes are those swaras in order. No mistakes counted, so unscored;
+// B = Hear again, N = Next (PlaybackExercise.jsx, eartraining/playback.js).
+function playbackLesson(id, pool, n) {
+  const swaras = n === 1 ? 'one swara' : `${WORD[n]} swaras`;
+  return {
+    id,
+    title: `Play it back: ${n} note${n > 1 ? 's' : ''}`,
+    unscored: true,
+    theory: [
+      n === 1
+        ? `The app plays **one swara** from ${list(pool)}. Play it back on the keys.`
+        : `The app plays **${swaras}** from ${list(pool)}, one after the other. Play them back on the keys, in the same order.`,
+      keyPicture(pool),
+      { list: [
+        'Play as many keys as you like: wrong keys just sound, nothing counts as a mistake.',
+        n === 1
+          ? 'As soon as you play the swara you heard, a ✔ and its name show.'
+          : `As soon as your last ${WORD[n]} notes are the swaras you heard, a ✔ and their names show.`,
+        `Press \`B\` to hear ${n === 1 ? 'it' : 'them'} again, and \`N\` for the next one.`,
+      ] },
+      { tip: n === 1 ? 'Hum Sa softly first, then hum the swara you heard: is it Sa, or how far up?' : 'Hum the swaras softly first, then find them on the keys.' },
+    ],
+    exercise: {
+      type: 'playback',
+      make: () => patternRounds(pool, n, QUESTIONS).map(names => ({
+        prompt: n === 1 ? 'One swara. Play it back.' : `${WORD[n][0].toUpperCase() + WORD[n].slice(1)} swaras, one after the other. Play them back.`,
+        play: parseNotes(names.join(' ')),
+        reveal: `**${names.map(x => SWARA_OF[x]).join(' → ')}**`,
+      })),
     },
   };
 }
@@ -114,14 +151,18 @@ function identifyLesson(id, pool, n) {
 // All open. Patterns go up in blocks of four, two and one, then down the same way, then up and down together
 const unit = (title, key, pool, letters) => {
   const patterns = letters.map((text, i) => ({ title: `Pattern ${i + 1}`, names: fromLetters(text) }));
+  // sections: subheadings in the lesson list, numbered 3.1, 3.2, 3.3 (the user, 2026-11-17)
+  const sections = [
+    ['Patterns', patterns.map((p, i) => patternLesson(`et-${key}-p${i + 1}`, i + 1, pool, patterns))],
+    // Identify 5 notes was removed 2026-11-16 (the user: add it back later); WORD/EXAMPLE still cover 5
+    ['Identify Notes', [1, 2, 3, 4].map(n => identifyLesson(`et-${key}-id${n}`, pool, n))],
+    ['Play It Back', [1, 2, 3, 4].map(n => playbackLesson(`et-${key}-pb${n}`, pool, n))],
+  ].filter(([, lessons]) => lessons.length);
   return {
     title,
     allOpen: true,
-    lessons: [
-      ...patterns.map((p, i) => patternLesson(`et-${key}-p${i + 1}`, i + 1, pool, patterns)),
-      // Identify 5 notes was removed 2026-11-16 (the user: add it back later); WORD/EXAMPLE still cover 5
-      ...[1, 2, 3, 4].map(n => identifyLesson(`et-${key}-id${n}`, pool, n)),
-    ],
+    lessons: sections.flatMap(([sectionTitle, lessons], section) =>
+      lessons.map((l, k) => ({ ...l, section, sectionTitle, inSection: k }))),
   };
 };
 
@@ -165,5 +206,5 @@ export const EAR_UNITS = [
 ];
 
 export const EAR_LESSONS = EAR_UNITS.flatMap((u, i) =>
-  u.lessons.map((lesson, l) => ({ ...lesson, num: `${i + 1}.${l + 1}`, unit: i }))
+  u.lessons.map(lesson => ({ ...lesson, num: `${i + 1}.${lesson.section + 1}.${lesson.inSection + 1}`, sectionNum: `${i + 1}.${lesson.section + 1}`, unit: i }))
 );

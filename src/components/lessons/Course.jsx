@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { hasPassed } from '../../lessons/progress.js';
 import LessonPage from './LessonPage.jsx';
 
@@ -71,7 +71,7 @@ export default function Course({ units, lessons, progress, update, piano, title 
   return (
     <div className="lessons with-units">
       <nav className="raga-nav unit-nav">
-        <div className="unit-title sub">{title} · {done}/{scored.length}</div>
+        <div className="unit-title sub">{title}{scored.length > 0 && <> · {done}/{scored.length}</>}</div>
         {units.map((unit, u) => {
           const inUnit = lessons.map((l, i) => i).filter(i => lessons[i].unit === u);
           const counted = inUnit.filter(i => !lessons[i].unscored);
@@ -85,31 +85,38 @@ export default function Course({ units, lessons, progress, update, piano, title 
             >
               <span className="lesson-link-num">{u + 1}</span>
               <span className="lesson-link-title">{unit.title}</span>
-              <span className="lesson-link-stars">{locked ? '🔒' : `${passed}/${counted.length}`}</span>
+              <span className="lesson-link-stars">{locked ? '🔒' : counted.length ? `${passed}/${counted.length}` : ''}</span>
             </button>
           );
         })}
       </nav>
       <aside className="course">
-        <div className="panel-title">{title} · {done}/{scored.length} passed</div>
+        {/* a course with nothing scored (Ear Training) shows no pass count */}
+        <div className="panel-title">{title}{scored.length > 0 && <> · {done}/{scored.length} passed</>}</div>
         <div className="pass-rule">{units[viewUnit].allOpen ? 'Play these in any order' : 'Get ★★ to unlock the next lesson'}</div>
         {units.map((unit, u) => u !== viewUnit ? null : (
           <div key={u} className="unit">
-            <div className="unit-title">{u + 1}. {unit.title}</div>
+            {/* units with sections (Ear Training) show only their 3.1, 3.2 subheadings (the user, 2026-11-17) */}
+            {!unit.lessons?.[0]?.sectionTitle && <div className="unit-title">{u + 1}. {unit.title}</div>}
             {lessons.map((l, i) => l.unit !== u ? null : (
+              <Fragment key={l.id}>
+              {l.sectionTitle && l.sectionTitle !== lessons[i - 1]?.sectionTitle && (
+                <div className="section-title"><span className="lesson-link-num">{l.sectionNum}</span>{l.sectionTitle}</div>
+              )}
               <button
-                key={l.id}
                 className={'lesson-link' + (i === selected ? ' active' : '')}
                 disabled={!isUnlocked(i)}
                 title={notYet(l) ? `Opens on ${opensLabel(l)}` : undefined}
                 onClick={() => setSelected(i)}
               >
-                <span className="lesson-link-num">{l.num}</span>
+                {/* sectioned lessons (Ear Training) have no number, just the indent under their subheading (the user, 2026-11-17) */}
+                <span className="lesson-link-num">{l.sectionTitle ? '' : l.num}</span>
                 <span className="lesson-link-title">{l.title}</span>
                 <span className={'lesson-link-stars' + (notYet(l) ? ' opens' : '')}>
                   {notYet(l) ? `🔒 ${opensLabel(l)}` : !isUnlocked(i) ? '🔒' : !l.unscored && progress.stars[l.id] ? '★'.repeat(progress.stars[l.id]) : ''}
                 </span>
               </button>
+              </Fragment>
             ))}
           </div>
         ))}
