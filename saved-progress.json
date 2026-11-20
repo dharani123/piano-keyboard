@@ -1,7 +1,7 @@
 {
   "desk-piano-colours": "gray",
   "desk-piano-relax": {
-    "pos": 53
+    "pos": 51
   },
   "desk-piano-carnatic-pick": "sarali-14",
   "desk-piano-hidden-songs": [
@@ -11,7 +11,8 @@
     "povodhe-prema",
     "ram-ram",
     "rangulu-ranguley",
-    "bbm-piano-piece"
+    "bbm-piano-piece",
+    "kanave-kanave"
   ],
   "desk-piano-progress": {
     "unlockAll": false,
@@ -250,10 +251,15 @@
   ],
   "desk-piano-hide-outlines": 0,
   "desk-piano-choice-gap": 0.5,
+  "desk-piano-jam-mode": "drop",
   "desk-piano-carnatic-mode": "relax",
-  "desk-piano-raga": "jhalavarali",
+  "desk-piano-raga": "jalarnavam",
+  "desk-piano-find-progress": {
+    "moonu-just-the-two-of-us": 96
+  },
   "desk-piano-ambient": 0,
   "desk-piano-carnatic-speed": 0.75,
+  "desk-piano-random-each-question": false,
   "desk-piano-songs": {
     "hot-cross-buns:wait": 3,
     "mary:wait": 3,

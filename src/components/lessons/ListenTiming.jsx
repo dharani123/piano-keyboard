@@ -81,8 +81,8 @@ export function useListenTiming(count = 2, key = 0) {
         <input type="checkbox" checked={vary} onChange={e => { setVary(e.target.checked); e.currentTarget.blur(); }} /> Vary gaps
       </label>
       <Slider label="Last note" title="How long the last note rings" range={HOLD} value={hold} onChange={setHold} />
-      <button type="button" className="listen-random" onClick={randomise} title="Give both sliders a random value">🎲 Random</button>
-      <button type="button" className="listen-reset" onClick={reset} title={`Gap back to ${GAP.initial} s, last note to ${HOLD.initial} s`}>↺ Reset</button>
+      <button type="button" className="listen-random" onClick={randomise} title="Give both sliders a random value">Random</button>
+      <button type="button" className="listen-reset" onClick={reset} title={`Gap back to ${GAP.initial} s, last note to ${HOLD.initial} s`}>Reset</button>
     </span>
   );
   return { gap, starts, hold, sliders };

@@ -433,7 +433,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .song-option button.active { border-color: var(--accent); color: var(--accent); }
 .song-note { font-size: 13px; color: var(--muted); margin: 4px 0 8px; }
 .song-meta { margin-left: auto; font-size: 12px; color: var(--muted); }
-.song-live { display: flex; align-items: center; gap: 14px; font-size: 14px; }
+.song-live { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 14px; }
+.song-live .find-graph { flex-basis: 100%; min-width: 0; }
 .song-live .progress { flex: 1; }
 .song-live .muted { color: var(--muted); }
 .chord-now b { font-size: 18px; color: var(--text); }
@@ -610,6 +611,13 @@ button.link.inline { display: inline; padding: 0; font-size: 13px; text-decorati
 .choice-options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 6px 0 4px; }
 .choice-option { min-width: 90px; }
 .choice-option .slope { display: block; margin: 2px auto; }
+.playback-graph .slope { display: block; margin: 4px auto 6px; }
+.playback-slots b { margin: 0 4px; }
+.find-panel { text-align: center; min-width: 0; }
+.find-panel .exercise-actions { justify-content: center; }
+.find-prompt { margin: 4px 0; }
+.find-graph { overflow-x: auto; width: 100%; max-width: 100%; margin: 4px 0 6px; padding-bottom: 4px; }
+.find-graph svg { display: block; }
 .choice-option.wrong { border-color: var(--wrong); color: var(--wrong); opacity: .7; }
 .choice-option.right { border-color: var(--target); color: var(--target); }
 .choice-option .choice-key { display: block; margin: 3px auto 0; width: fit-content; font-size: .7em; opacity: .6; }

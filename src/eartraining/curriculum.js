@@ -2,15 +2,17 @@ import { parseNotes } from '../data/songs.js';
 import { buildFlow, ROUNDS } from './flow.js';
 
 // The Ear Training tab: basic swara patterns (Sa = C). Each unit has seven fixed patterns
-// that fall like Relax (exercise type 'flow', see flow.js), then four practice lessons (1 to 4
-// swaras) that play random swaras and ask for the matching picture (type 'choice', like Identify Notes).
+// that fall like Relax (exercise type 'flow', see flow.js), then four practice lessons (1 to 4, Sa Ri Ga Ma also 5
+// swaras) where the app plays random swaras and you play them back (type 'playback').
+// The Identify lessons (type 'choice') are kept below but not in the list.
 // Same lesson format as lessons/curriculum.js.
 
 const SWARA_OF = { C: 'Sa', D: 'Ri', E: 'Ga', F: 'Ma', G: 'Pa' };
 const KEY_OF = { C: 'S', D: 'D', E: 'F', F: 'G', G: 'H' };
 // Notes are spaced like Identify Notes (ListenTiming.jsx): each lesson opens with a random
 // Gap around 0.5 s, every gap varied, and the last note ringing around 1 s
-const QUESTIONS = 10;
+const QUESTIONS = 10; // Identify (not in the list now)
+const PLAYBACK_QUESTIONS = 15; // Play it back (the user, 2026-11-19; was 10)
 
 // `count` patterns of `n` notes from `pool`. Three or more notes are never all one swara
 // (one or two may be: Sa Sa is a fair question). Never the same pattern twice running,
@@ -115,7 +117,8 @@ function identifyLesson(id, pool, n) {
 }
 
 // Play it back (every unit, the user 2026-11-17): the app plays n swaras, you play
-// keys until your last n notes are those swaras in order. No mistakes counted, so unscored;
+// keys until your last n notes are those swaras in order; each swara you have in line shows,
+// with the graph drawn up to it (2026-11-19). No mistakes counted, so unscored;
 // B = Hear again, N = Next (PlaybackExercise.jsx, eartraining/playback.js).
 function playbackLesson(id, pool, n) {
   const swaras = n === 1 ? 'one swara' : `${WORD[n]} swaras`;
@@ -131,35 +134,37 @@ function playbackLesson(id, pool, n) {
       { list: [
         'Play as many keys as you like: wrong keys just sound, nothing counts as a mistake.',
         n === 1
-          ? 'As soon as you play the swara you heard, a ✔ and its name show.'
-          : `As soon as your last ${WORD[n]} notes are the swaras you heard, a ✔ and their names show.`,
+          ? 'As soon as you play the swara you heard, a ✔, its name and its dot on the graph show.'
+          : 'Find the swaras one at a time, from the first. Each one you find shows with its name and stays, and the graph grows by a dot, so you see the ups and downs. Wrong keys just sound.',
         `Press \`B\` to hear ${n === 1 ? 'it' : 'them'} again, and \`N\` for the next one.`,
       ] },
       { tip: n === 1 ? 'Hum Sa softly first, then hum the swara you heard: is it Sa, or how far up?' : 'Hum the swaras softly first, then find them on the keys.' },
     ],
     exercise: {
       type: 'playback',
-      make: () => patternRounds(pool, n, QUESTIONS).map(names => ({
+      make: () => patternRounds(pool, n, PLAYBACK_QUESTIONS).map(names => ({
         prompt: n === 1 ? 'One swara. Play it back.' : `${WORD[n][0].toUpperCase() + WORD[n].slice(1)} swaras, one after the other. Play them back.`,
         play: parseNotes(names.join(' ')),
-        reveal: `**${names.map(x => SWARA_OF[x]).join(' → ')}**`,
+        swaras: names.map(x => SWARA_OF[x]),
       })),
     },
   };
 }
 
 // All open. Patterns go up in blocks of four, two and one, then down the same way, then up and down together
-const unit = (title, key, pool, letters) => {
+// `sizes`: how many notes each Play it back lesson plays (Sa Ri Ga Ma adds a 5-note challenge, the user 2026-11-20)
+const unit = (title, key, pool, letters, sizes = [1, 2, 3, 4]) => {
   const patterns = letters.map((text, i) => ({ title: `Pattern ${i + 1}`, names: fromLetters(text) }));
   // sections: subheadings in the lesson list, numbered 3.1, 3.2, 3.3 (the user, 2026-11-17)
   const sections = [
     ['Patterns', patterns.map((p, i) => patternLesson(`et-${key}-p${i + 1}`, i + 1, pool, patterns))],
-    // Identify 5 notes was removed 2026-11-16 (the user: add it back later); WORD/EXAMPLE still cover 5
-    ['Identify Notes', [1, 2, 3, 4].map(n => identifyLesson(`et-${key}-id${n}`, pool, n))],
-    ['Play It Back', [1, 2, 3, 4].map(n => playbackLesson(`et-${key}-pb${n}`, pool, n))],
+    // Identify Notes section removed 2026-11-19 (the user: Play it back covers it). To bring it back:
+    // ['Identify Notes', [1, 2, 3, 4].map(n => identifyLesson(`et-${key}-id${n}`, pool, n))],
+    ['Play It Back', sizes.map(n => playbackLesson(`et-${key}-pb${n}`, pool, n))],
   ].filter(([, lessons]) => lessons.length);
   return {
     title,
+    pool,
     allOpen: true,
     lessons: sections.flatMap(([sectionTitle, lessons], section) =>
       lessons.map((l, k) => ({ ...l, section, sectionTitle, inSection: k }))),
@@ -193,7 +198,7 @@ export const EAR_UNITS = [
     'MMGGRRSS',
     'MGRS MGRS',
     'SRGM MGRS',
-  ]),
+  ], [1, 2, 3, 4, 5]),
   unit('Sa, Ri, Ga, Ma, Pa', 'srgmp', ['C', 'D', 'E', 'F', 'G'], [
     'SSSS RRRR GGGG MMMM PPPP',
     'SSRRGGMMPP',

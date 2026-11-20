@@ -40,19 +40,26 @@ const aboveDot = (pitches, i) => {
   if (next === undefined) return prev < pitches[i];
   return prev + next <= 2 * pitches[i];
 };
-function Slope({ pitches, starts, labels, near }) {
+// shown (Play it back, the user 2026-11-19): draw only the first `shown` notes, spaced and scaled
+// for the whole pattern so the graph grows in place; names sit by the visible line only, so they
+// don't hint where the next note goes
+// range = [lowest, highest] row (Find one by one: the song's own range, which can pass an octave)
+export function Slope({ pitches: all, starts, labels: allLabels, near, shown = all.length, range = [0, 11] }) {
+  const [lo, hi] = range;
+  const pitches = all.slice(0, shown);
+  const labels = allLabels?.slice(0, shown);
   const total = starts.at(-1) || 1;
   const span = Math.min(total * PX_PER_SECOND, MAX_SPAN);
-  const x = i => (pitches.length === 1 ? SIDE : SIDE + (starts[i] / total) * span);
-  const width = SIDE * 2 + (pitches.length === 1 ? 0 : span);
+  const x = i => (all.length === 1 ? SIDE : SIDE + (starts[i] / total) * span);
+  const width = SIDE * 2 + (all.length === 1 ? 0 : span);
   const pad = labels && near ? LABEL_H : 0;
-  const y = p => pad + TOP + (11 - p) * ROW;
+  const y = p => pad + TOP + (hi - p) * ROW;
   const points = pitches.map((p, i) => `${x(i)},${y(p)}`).join(' ');
-  const height = TOP * 2 + 11 * ROW + (labels ? (near ? 2 * LABEL_H : LABEL_H) : 0);
+  const height = TOP * 2 + (hi - lo) * ROW + (labels ? (near ? 2 * LABEL_H : LABEL_H) : 0);
   return (
     <svg className="slope" viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true">
-      {[...Array(12).keys()].map(p => (
-        <line key={p} x1="4" x2={width - 4} y1={y(p)} y2={y(p)} stroke="currentColor" strokeWidth="0.6" opacity={p === 0 ? 0.45 : 0.18} />
+      {Array.from({ length: hi - lo + 1 }, (_, i) => lo + i).map(p => (
+        <line key={p} x1="4" x2={width - 4} y1={y(p)} y2={y(p)} stroke="currentColor" strokeWidth="0.6" opacity={p % 12 === 0 ? 0.45 : 0.18} />
       ))}
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {pitches.map((p, i) => <circle key={i} cx={x(i)} cy={y(p)} r="3.5" fill="currentColor" />)}

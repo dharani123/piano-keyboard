@@ -15,6 +15,9 @@ import { RAGAS, DEFAULT_RAGA, CARNATIC_LEVELS, GEETHAM_LEVEL, carnaticSongs, sho
 import { loadBest, saveBest, isPassed } from '../../songs/best.js';
 import ImportAudio from './ImportAudio.jsx';
 import NoteSheet from './NoteSheet.jsx';
+import FindPanel from './FindPanel.jsx';
+import SongGraph from './SongGraph.jsx';
+import { findNotes } from '../../songs/find.js';
 import RagaNav from './RagaNav.jsx';
 import FallingNotes, { FallSpace, FALL_HEIGHT, PX_PER_SECOND, codeFor } from './FallingNotes.jsx';
 import { createPlay, press, advance, score, pitchKey } from '../../songs/player.js';
@@ -30,6 +33,8 @@ const RAGA_KEY = 'desk-piano-raga';
 const MODES = {
   listen: { label: 'Listen', hint: 'The app plays the song for you while the notes fall, so you know how it goes' },
   play: { label: 'Play along', hint: 'The song keeps going like the real thing' },
+  // Decoded songs only (the user, 2026-11-19): decode it yourself, see songs/find.js
+  find: { label: 'Find one by one', hint: 'Hear the next 1 to 4 notes (C V N M) and find them on the keys yourself; B steps the cursor back a note. A long graph draws the tune as you play it from the start, and your place is saved', decodedOnly: true },
 };
 const MESSAGES = ['Keep practising, it gets easier!', 'Nice start!', 'Great playing!', 'Perfect! 🎉'];
 
@@ -69,7 +74,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
   useEffect(() => { if (song.carnatic && (songId !== null || lastPickOpen)) saveCarnaticPick(song.id); }, [song.id]);
   const speeds = song.carnatic ? CARNATIC_SPEEDS : SPEEDS;
   // Carnatic exercises are always played along at tempo
-  const mode = kind === 'carnatic' ? 'play' : modeChoice;
+  const mode = kind === 'carnatic' ? 'play' : MODES[modeChoice].decodedOnly && kind !== 'decoded' ? 'play' : modeChoice;
   // an exercise that needs notes off the home row slides the keys two places while it's picked
   const layout = song.layout ?? 0;
   useEffect(() => { piano.setLayout(layout); }, [layout]);
@@ -162,6 +167,12 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
     if (typeof m !== 'string') m = mode; // called straight from a click
     if (m !== mode) setMode(m);
     stop();
+    if (m === 'find') { // no falling notes: FindPanel runs it
+      setResult(null);
+      setPhase('finding');
+      piano.setStatus(`${song.title.slice(0, 14).toUpperCase()}`);
+      return;
+    }
     const spb = 60 / (song.bpm * speed);
     const base = piano.octave;
     const play = createPlay(song, { mode: m, baseOctave: base, secondsPerBeat: spb });
@@ -262,15 +273,16 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
     ? <FallingNotes slot={piano.fallSlot} play={r.play} base={r.base} spb={r.spb} shift={r.song.layout ?? 0} />
     : <FallSpace slot={piano.fallSlot} />;
 
-  const startStop = phase === 'playing'
+  const running = phase === 'playing' || phase === 'finding';
+  const startStop = running
     ? <button className="big" onClick={quit}>■ Stop</button>
     : <button className="primary big" onClick={begin}>▶ Start</button>;
   const startStopNow = useRef();
-  startStopNow.current = phase === 'playing' ? quit : begin;
+  startStopNow.current = running ? quit : begin;
   useEffect(() => piano.onStartStop(() => startStopNow.current()), []);
   // the same button again in the voice panel, so it is to hand at the top
   const spare = piano.playSlot && createPortal(
-    <button className="voice-btn" onClick={phase === 'playing' ? quit : begin}>{phase === 'playing' ? 'Stop' : 'Start'}</button>,
+    <button className="voice-btn" onClick={running ? quit : begin}>{running ? 'Stop' : 'Start'}</button>,
     piano.playSlot
   );
 
@@ -279,6 +291,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
     ? song.events.findLast(e => e.beat <= Math.max(r.play.beat, 0) + 0.01)?.label
     : null;
   const live = r && score(r.play);
+  const graphNotes = useMemo(() => findNotes(song), [song]);
 
   const bar = phase !== 'pick' && piano.slot && createPortal(
     <div className="slot-inner">
@@ -293,8 +306,13 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
           {r.play.beat < 0 && <span className="muted">Get ready…</span>}
           <div className="progress"><div className="progress-bar" style={{ width: `${progress * 100}%` }} /></div>
           <button onClick={quit}>Stop</button>
+          {/* Play along: the tune drawn as you hit each note (the user, 2026-11-19) */}
+          {r.play.mode === 'play' && kind !== 'carnatic' && (
+            <SongGraph notes={graphNotes} barBeats={song.barBeats} solid={i => r.play.notes.some(n => n.group === i && n.hit)} />
+          )}
         </div>
       )}
+      {phase === 'finding' && <FindPanel key={song.id} song={song} piano={piano} speed={speed} onQuit={quit} />}
       {phase === 'listened' && (
         <div className="result">
           <p className="result-msg">That's how it goes. Now your turn!</p>
@@ -333,12 +351,12 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
       {fall}
       {spare}
       {bar}
-      {kind === 'carnatic' && <RagaNav raga={raga} disabled={phase === 'playing'} onPick={pickRaga} />}
+      {kind === 'carnatic' && <RagaNav raga={raga} disabled={running} onPick={pickRaga} />}
       <SongList
         levels={LEVELS[kind]}
         songs={allSongs}
         activeId={song.id}
-        disabled={phase === 'playing'}
+        disabled={running}
         isLocked={isLocked}
         best={best}
         mode={mode}
@@ -350,7 +368,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
           </div>
         )}
       >
-        {kind === 'western' && <ImportAudio disabled={phase === 'playing'} onImported={addMySong} />}
+        {kind === 'western' && <ImportAudio disabled={running} onImported={addMySong} />}
       </SongList>
 
       <div className="song-setup">
@@ -364,7 +382,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
           <p className="song-note">
             Notes worked out from your recording ({song.events.length} notes): the top line only, folded into
             middle C to high F. Expect some wrong or extra notes.{' '}
-            <button className="link inline" disabled={phase === 'playing'} onClick={deleteMySong}>Delete this song</button>
+            <button className="link inline" disabled={running} onClick={deleteMySong}>Delete this song</button>
           </p>
         )}
         {song.scale && (
@@ -376,11 +394,11 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
         {song.decoded && (
           <p className="song-note">
             {allSongs.length > 1 && (
-              <button className="link inline" disabled={phase === 'playing'} onClick={() => setConfirmDelete(true)}>Delete this song</button>
+              <button className="link inline" disabled={running} onClick={() => setConfirmDelete(true)}>Delete this song</button>
             )}
             {allSongs.length > 1 && hidden.length > 0 && ' · '}
             {hidden.length > 0 && (
-              <button className="link inline" disabled={phase === 'playing'} onClick={() => updateHidden([])}>
+              <button className="link inline" disabled={running} onClick={() => updateHidden([])}>
                 Restore {hidden.length} deleted {hidden.length === 1 ? 'song' : 'songs'}
               </button>
             )}
@@ -405,8 +423,8 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
         {kind !== 'carnatic' && (
           <div className="song-option">
             <span className="option-label">Mode</span>
-            {Object.entries(MODES).map(([id, m]) => (
-              <button key={id} className={mode === id ? 'active' : ''} disabled={phase === 'playing'} onClick={() => setMode(id)}>
+            {Object.entries(MODES).filter(([, m]) => !m.decodedOnly || kind === 'decoded').map(([id, m]) => (
+              <button key={id} className={mode === id ? 'active' : ''} disabled={running} onClick={() => setMode(id)}>
                 {m.label}
               </button>
             ))}
@@ -417,7 +435,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
         <div className="song-option">
           <span className="option-label">Speed</span>
           {speeds.map(v => (
-            <button key={v} className={speed === v ? 'active' : ''} disabled={phase === 'playing'} onClick={() => setSpeed(v)}>
+            <button key={v} className={speed === v ? 'active' : ''} disabled={running} onClick={() => setSpeed(v)}>
               {speedLabel(v, song.carnatic)}
             </button>
           ))}
@@ -431,7 +449,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
         )}
         {mode === 'play' && (
           <label className="unlock">
-            <input type="checkbox" checked={metronome} disabled={phase === 'playing'} onChange={e => setMetronome(e.target.checked)} />
+            <input type="checkbox" checked={metronome} disabled={running} onChange={e => setMetronome(e.target.checked)} />
             Metronome clicks
           </label>
         )}
@@ -442,7 +460,7 @@ export default function SongsMode({ piano, kind, modeSwitch }) {
         <div className="sheet-title">
           All notes in order <span>· {song.events.length} {song.chords ? 'chords' : 'notes'} · {song.talam?.beats ?? 8} beats per line{song.carnatic ? ` (one ${song.talam.name} talam cycle, ${song.talam.parts})` : ''}</span>
         </div>
-        <NoteSheet song={song} />
+        {mode === 'find' ? <p className="song-note">Hidden in Find one by one, so the notes stay yours to find.</p> : <NoteSheet song={song} />}
       </div>
     </div>
   );

@@ -433,6 +433,76 @@ const RAW = [
               D#+/1.5 C+/1 C#+/1 |
               F+/0.5 F+/0.5 F+/0.25 D#+/0.25 F+/1.5 r/1`,
   },
+  {
+    id: 'moonu-just-the-two-of-us',
+    title: 'Moonu BGM: Just the Two of Us (piano melody)',
+    level: 'Decoded songs',
+    bpm: 101,
+    decoded: true,
+    scale: 'D minor',
+    hint: "Right-hand melody from your two Songscription sheets, in D minor, an octave lower so it fits, on the normal keys: S D F G H (C D E F G, Sa Ri Ga Ma Pa), J I (A, B♭). It keeps falling back to D (Ri), and from bar 10 it circles D G G G F E. 101 BPM is gentle, so try 75% and then full speed.",
+    // Right hand only, from the user's two Songscription sheets of the Moonu BGM "Just the two
+    // of us" ("3 Bgm The piano n I"): 0-30 s (bars 1-13, q = 101) and 25-55 s (q = 99), which
+    // overlap: the second sheet's bars 1-3 are the first's bars 11-13, so it joins at its bar 4
+    // (bar 14 here). D minor (one flat), 4/4, 21 bars. Written an octave lower: the sheets run
+    // G4 to B♭5. Top note of each chord; grace notes and trills left out; tied notes joined.
+    // The last bar's quick run up to D6 and the 8va D is left out: it ends on the held D.
+    // Bars 1 and 5: E G F is E F, the G (Pa) dropped and the F (Ma) held for both (the user, 2026-11-19).
+    // The notes below C4 are left out too, for the default layout (the user, 2026-11-19): the G
+    // ending bar 20 is a rest and the A C B♭ bar after it is dropped.
+    // Chords: Dm | Am7 | B♭maj7 | Gm7 Am7 | Dm | Am7 | B♭maj7 | Gm7 Am7 | Dm | Dm7/C | Gm | Am7 |
+    //         Dm | Dm7/C | Gm | Am | Dm Am7 | Dm Am7 | Dm Am7 | Dm9 (the F Am/E bar dropped)
+    pattern: `r/3 E/0.5 F/0.5 |
+              D/2 r/1 D/0.5 C/0.5 |
+              E/1.5 C/1.5 E/0.5 F/0.5 |
+              D/2 r/1.5 C/0.5 |
+              E/2 r/1 E/0.5 F/0.5 |
+              D/2 r/1 D/0.5 C/0.5 |
+              E/1 F/0.25 E/0.25 D/0.25 C/0.25 r/1 E/0.5 F/0.5 |
+              D/2 r/1.5 C/0.5 |
+              E/2 r/2 |
+              D/0.5 G/0.5 G/0.5 G/0.5 F/0.5 E/0.5 F/1 |
+              D/0.5 G/0.5 G/0.5 G/0.5 F/0.5 E/0.5 F/1 |
+              D/0.5 G/0.5 G/0.5 G/0.5 F/0.5 E/0.5 D/0.25 E/0.25 D/0.25 C/0.25 |
+              C/0.5 D/0.5 E/0.5 F/0.5 E/2 |
+              D/0.5 G/0.5 G/0.5 G/0.5 F/0.5 E/0.5 F/1 |
+              D/0.5 A#/0.5 A/0.5 G/0.5 F/0.5 E/0.5 F/1 |
+              D/0.5 G/0.5 G/0.5 G/0.5 F/0.5 E/0.5 D/0.5 C/0.5 |
+              C/0.5 D/0.5 E/0.5 F/0.5 E/2 |
+              F/0.5 D/0.5 F/0.5 E/2.5 |
+              F/0.5 D/0.5 F/0.5 E/2.5 |
+              F/0.5 D/0.5 F/0.5 E/2 r/0.5 |
+              D/4`,
+  },
+  {
+    id: 'kanave-kanave',
+    title: 'Kanave Kanave (piano melody)',
+    level: 'Decoded songs',
+    bpm: 94,
+    decoded: true,
+    scale: 'A minor',
+    barBeats: 3.5, // 7/8: bar lines on the graphs every seven eighths
+    hint: "Right-hand melody from your Songscription sheet, in A minor, all white keys: H J K L ; ' (G A B, high C D E). It is in 7/8: seven quick notes a bar, counted 1-2-3-4 5-6-7. Bars 1 to 8 are one phrase, A A E A D C B, played three times and then A B C and a long B. Try 75% first.",
+    // Right hand only, from the user's Songscription sheet of "Kanave Kanave" ("The piano n I |
+    // Jus the two of us"), A minor, 7/8 (3.5 beats a bar), q = 94, 13 bars. Bars 1-8 as written
+    // (A4 to E5); bars 9-13 sit an octave higher on the sheet (A5 to D6) and are written an
+    // octave lower here, so it all fits the default keys. Top note of each chord (bars 9, 11, 13
+    // are chords on A5); grace notes and trills left out; tied notes joined.
+    // Chords: Am Em7/B | Em7/B | Am | Em7/B | Am | Em7/B | Am | Em7 | Am Em | | Fmaj7 | C G/D | Am
+    pattern: `A/0.5 A/0.5 E+/0.5 A/0.5 D+/0.5 C+/0.5 B/0.5 |
+              A/0.5 A/0.5 E+/0.5 A/0.5 D+/0.5 C+/0.5 B/0.5 |
+              A/0.5 A/0.5 E+/0.5 A/0.5 D+/0.5 C+/0.5 B/0.5 |
+              A/0.5 B/0.5 C+/0.5 B/2 |
+              A/0.5 A/0.5 E+/0.5 A/0.5 D+/0.5 C+/0.5 B/0.5 |
+              A/0.5 A/0.5 E+/0.5 A/0.5 D+/0.5 C+/0.5 B/0.5 |
+              A/0.5 A/0.5 E+/0.5 A/0.5 D+/0.5 C+/0.5 B/0.5 |
+              A/0.5 B/0.5 C+/0.5 B/2 |
+              A/0.5 A/0.5 A/0.5 A/0.5 A/0.5 A/1 |
+              A/0.5 B/0.5 C+/0.5 B/1 A/0.5 G/0.5 |
+              A/0.5 A/0.5 A/0.5 A/0.5 A/0.5 A/1 |
+              A/0.5 D+/0.5 C+/0.5 B/1 A/0.5 G/0.5 |
+              A/0.5 A/0.5 A/0.5 A/0.5 A/0.5 r/1`,
+  },
 ];
 
 const CHORD_NAMES = { '0,4,7': 'C', '5,9,0': 'F', '9,0,4': 'Am', '4,7,11': 'Em', '7,11,2': 'G' };

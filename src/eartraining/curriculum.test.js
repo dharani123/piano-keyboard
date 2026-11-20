@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { EAR_UNITS, EAR_LESSONS, patternRounds, possiblePatterns } from './curriculum.js';
+import { EAR_UNITS, EAR_LESSONS, patternRounds, possiblePatterns, patternQuestions } from './curriculum.js';
 import { buildFlow, segmentAt, ROUNDS, REST_BEATS } from './flow.js';
-
-const IDENTIFY = ['Identify 1 note', 'Identify 2 notes', 'Identify 3 notes', 'Identify 4 notes'];
 
 describe('ear training', () => {
   it('has the three basic-pattern units, Sa Ri then adding Ga then Ma', () => {
@@ -24,12 +22,12 @@ describe('ear training', () => {
     });
   });
 
-  it('Identify 1 to 4 notes ask for the picture of 10 patterns, up to four different options each', () => {
+  it('no Identify lessons in the list (2026-11-19); the questions still build: the picture of 10 patterns, up to four different options each', () => {
     const pools = [[0, 2], [0, 2, 4], [0, 2, 4, 5], [0, 2, 4, 5, 7]];
-    for (const lesson of EAR_LESSONS.filter(l => l.sectionTitle === 'Identify Notes')) {
-      const n = Number(lesson.id.at(-1));
-      expect(lesson.title).toBe(n === 1 ? 'Identify 1 note' : `Identify ${n} notes`);
-      const qs = lesson.exercise.make();
+    expect(EAR_LESSONS.some(l => l.exercise.type === 'choice')).toBe(false);
+    for (const [unit, n] of [0, 1, 2, 3].flatMap(u => [1, 2, 3, 4].map(n => [u, n]))) {
+      const lesson = { unit };
+      const qs = patternQuestions(EAR_UNITS[unit].pool, n, 10);
       expect(qs).toHaveLength(10);
       for (const q of qs) {
         expect(new Set(q.options).size).toBe(Math.min(4, possiblePatterns(pools[lesson.unit], n)));
@@ -62,14 +60,14 @@ describe('ear training', () => {
     expect(last.song.totalBeats).toBe(8 * ROUNDS);
     expect(swaras(flow('et-srg-p6'), 0)).toBe(`${'Ga Ri Sa Ga Ri Sa '.repeat(ROUNDS)}`.trim());
     expect(swaras(flow('et-srgm-p1'), 0)).toBe(`${'Sa Sa Sa Sa Ri Ri Ri Ri Ga Ga Ga Ga Ma Ma Ma Ma '.repeat(ROUNDS)}`.trim());
-    expect(EAR_UNITS[2].lessons).toHaveLength(15); // 7 patterns, Identify 1-4, Play it back 1-4
-    expect(EAR_UNITS.every(u => u.lessons.length === 15)).toBe(true);
+    expect(EAR_UNITS[2].lessons).toHaveLength(12); // 7 patterns, Play it back 1-5
+    expect(EAR_UNITS.map(u => u.lessons.length)).toEqual([11, 11, 12, 11]);
     expect(swaras(flow('et-srgmp-p7'), 0)).toBe(`${'Sa Ri Ga Ma Pa Pa Ma Ga Ri Sa '.repeat(ROUNDS)}`.trim());
     expect(EAR_UNITS.every(u => u.allOpen)).toBe(true);
     // no stars or mistakes anywhere in Ear Training
     expect(EAR_LESSONS.every(l => l.unscored)).toBe(true);
     expect(EAR_LESSONS.filter(l => l.exercise.type === 'choice').every(l => l.exercise.noMistakes)).toBe(true);
-    expect(EAR_UNITS[0].lessons.map(l => l.title)).toEqual([1, 2, 3, 4, 5, 6, 7].map(n => `Pattern ${n}`).concat(IDENTIFY, ['Play it back: 1 note', ...[2, 3, 4].map(n => `Play it back: ${n} notes`)]));
+    expect(EAR_UNITS[0].lessons.map(l => l.title)).toEqual([1, 2, 3, 4, 5, 6, 7].map(n => `Pattern ${n}`).concat(['Play it back: 1 note', ...[2, 3, 4].map(n => `Play it back: ${n} notes`)]));
   });
 
   it('knows which pattern is falling, the next one during a rest', () => {
@@ -93,18 +91,19 @@ describe('ear training practice sizes', () => {
 });
 
 describe('ear training play it back', () => {
-  it('every unit has Play it back 1 to 4 notes: 10 unscored patterns from its swaras', () => {
+  it('every unit has Play it back 1 to 4 notes (Sa Ri Ga Ma up to 5): 15 unscored patterns from its swaras', () => {
     const pools = [[0, 2], [0, 2, 4], [0, 2, 4, 5], [0, 2, 4, 5, 7]];
     const lessons = EAR_LESSONS.filter(l => l.exercise.type === 'playback');
-    expect(lessons.map(l => l.id)).toEqual(['sr', 'srg', 'srgm', 'srgmp'].flatMap(k => [1, 2, 3, 4].map(n => `et-${k}-pb${n}`)));
-    lessons.forEach((l, i) => {
+    expect(lessons.map(l => l.id)).toEqual(['sr', 'srg', 'srgm', 'srgmp'].flatMap(k => (k === 'srgm' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4]).map(n => `et-${k}-pb${n}`)));
+    lessons.forEach(l => {
       expect(l.unscored).toBe(true);
       expect(l.sectionTitle).toBe('Play It Back');
       const qs = l.exercise.make();
-      expect(qs).toHaveLength(10);
+      expect(qs).toHaveLength(15);
       qs.forEach(q => {
-        expect(q.play).toHaveLength((i % 4) + 1);
+        expect(q.play).toHaveLength(Number(l.id.at(-1)));
         q.play.forEach(n => expect(pools[l.unit]).toContain(n.semitone));
+        expect(q.swaras).toHaveLength(q.play.length);
       });
     });
   });

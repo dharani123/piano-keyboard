@@ -76,9 +76,21 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
     setPhase('exercise');
   }
 
-  // Next lesson button (its N shortcut was removed 2026-11-13: N now answers choice questions)
+  // Next lesson button. N is its shortcut again (the user, 2026-11-17), on the result screen only,
+  // so it doesn't clash with N answering choice questions; the listener is added after the result
+  // shows, so the N press that finishes a lesson doesn't also skip to the next one.
   const canNext = phase === 'result' && (lesson.unscored || Math.max(result?.stars ?? 0, bestStars) >= PASS_STARS) && hasNext;
   const next = () => { onNext(); pageRef.current?.scrollIntoView({ behavior: 'smooth' }); };
+  useEffect(() => {
+    if (!canNext) return;
+    const onKey = e => {
+      if (e.code !== 'KeyN' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea')) return;
+      e.preventDefault();
+      next();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [canNext]);
 
   // Space (or a left Shift tap) = Start exercise / Stop / Try again. During an exercise, one
   // with its own start (rhythm) can take it over through registerStartStop; otherwise
@@ -125,7 +137,7 @@ export default function LessonPage({ lesson, bestStars, hasNext, piano, onFinish
           <div className="result-actions">
             <button onClick={retry}>↻ Try again <kbd>Space</kbd></button>
             <button onClick={backToNotes}>Review notes</button>
-            {canNext && <button className="primary" onClick={next}>Next lesson →</button>}
+            {canNext && <button className="primary" onClick={next}>Next lesson → <kbd>N</kbd></button>}
           </div>
         </div>
       )}
